@@ -183,7 +183,7 @@ class OrderControllerIntegrationTest {
         Map<?, ?> body = objectMapper.readValue(result.getResponse().getContentAsString(), Map.class);
         String orderNumber = (String) body.get("orderNumber");
 
-        mockMvc.perform(get("/api/orders/" + orderNumber))
+        mockMvc.perform(get("/api/orders/track/" + orderNumber))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.orderNumber").value(orderNumber))
                 .andExpect(jsonPath("$.status").value("PENDING"));
@@ -191,7 +191,7 @@ class OrderControllerIntegrationTest {
 
     @Test
     void trackOrder_unknownOrderNumber_returns400() throws Exception {
-        mockMvc.perform(get("/api/orders/ORD-INVALID-000000"))
+        mockMvc.perform(get("/api/orders/track/ORD-INVALID-000000"))
                 .andExpect(status().isBadRequest());
     }
 

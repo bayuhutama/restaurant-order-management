@@ -103,7 +103,8 @@ class TableSessionServiceTest {
 
     @Test
     void getOpenSession_returnsMappedResponse_whenSessionExists() {
-        openSession.setOrders(List.of());
+        // orders is null → service falls back to repo query
+        openSession.setOrders(null);
         when(tableSessionRepository.findByTableNumberAndStatus("5", TableSessionStatus.OPEN))
                 .thenReturn(Optional.of(openSession));
         when(orderRepository.findByTableSessionId(1L)).thenReturn(List.of());

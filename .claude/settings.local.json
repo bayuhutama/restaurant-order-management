@@ -32,7 +32,12 @@
       "Bash(JAVA_HOME=\"/c/Program Files/Java/jdk-17.0.17\" PATH=\"/c/Program Files/Java/jdk-17.0.17/bin:$PATH\" cmd /c \"mvnw.cmd test > test-output.txt 2>&1\")",
       "Bash(export JAVA_HOME=\"/c/Program Files/Java/jdk-17.0.17\")",
       "Bash(export PATH=\"$JAVA_HOME/bin:$PATH\")",
-      "Bash(./mvnw.cmd test:*)"
+      "Bash(./mvnw.cmd test:*)",
+      "Bash(cmd /c \"where psql 2>nul & where mysql 2>nul & where mongod 2>nul & sc query postgresql 2>nul | findstr STATE & sc query mysql 2>nul | findstr STATE & echo done\")",
+      "Bash(cmd /c \"where psql & where mysql & where mongod & where sqlite3\" 2>&1)",
+      "Bash(cmd /c \"sc query type= all 2>nul | findstr /i \\\\\"postgresql mysql mariadb mongo\\\\\"\" 2>&1)",
+      "Bash(cmd /c \"reg query HKLM\\\\SOFTWARE\\\\PostgreSQL 2>nul & reg query HKLM\\\\SOFTWARE\\\\MySQL 2>nul & reg query HKLM\\\\SOFTWARE\\\\MariaDB 2>nul & reg query \\\\\"HKLM\\\\SOFTWARE\\\\MongoDB\\\\\" 2>nul\" 2>&1)",
+      "Bash(cmd /c \"where docker & docker --version\" 2>&1)"
     ]
   }
 }

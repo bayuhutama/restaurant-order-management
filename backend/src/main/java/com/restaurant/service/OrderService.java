@@ -19,6 +19,8 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -185,10 +187,26 @@ public class OrderService {
                 .stream().map(this::mapToResponse).toList();
     }
 
+    private static final Map<OrderStatus, Set<OrderStatus>> VALID_TRANSITIONS = Map.of(
+            OrderStatus.PENDING,    Set.of(OrderStatus.CONFIRMED, OrderStatus.CANCELLED),
+            OrderStatus.CONFIRMED,  Set.of(OrderStatus.PREPARING, OrderStatus.CANCELLED),
+            OrderStatus.PREPARING,  Set.of(OrderStatus.READY),
+            OrderStatus.READY,      Set.of(OrderStatus.DELIVERED),
+            OrderStatus.DELIVERED,  Set.of(),
+            OrderStatus.CANCELLED,  Set.of(),
+            OrderStatus.AWAITING_PAYMENT, Set.of(OrderStatus.PENDING, OrderStatus.CANCELLED)
+    );
+
     @Transactional
     public OrderResponse updateOrderStatus(Long id, OrderStatus newStatus) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
+
+        Set<OrderStatus> allowed = VALID_TRANSITIONS.getOrDefault(order.getStatus(), Set.of());
+        if (!allowed.contains(newStatus)) {
+            throw new RuntimeException(
+                    "Cannot transition order from " + order.getStatus() + " to " + newStatus);
+        }
 
         order.setStatus(newStatus);
 

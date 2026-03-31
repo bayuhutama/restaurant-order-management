@@ -1,26 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: com.restaurant.integration.OrderControllerIntegrationTest
 -------------------------------------------------------------------------------
-Tests run: 9, Failures: 2, Errors: 0, Skipped: 0, Time elapsed: 15.66 s <<< FAILURE! -- in com.restaurant.integration.OrderControllerIntegrationTest
-com.restaurant.integration.OrderControllerIntegrationTest.trackOrder_unknownOrderNumber_returns400 -- Time elapsed: 0.037 s <<< FAILURE!
-java.lang.AssertionError: Status expected:<400> but was:<403>
-	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:59)
-	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:122)
-	at org.springframework.test.web.servlet.result.StatusResultMatchers.lambda$matcher$9(StatusResultMatchers.java:637)
-	at org.springframework.test.web.servlet.MockMvc$1.andExpect(MockMvc.java:214)
-	at com.restaurant.integration.OrderControllerIntegrationTest.trackOrder_unknownOrderNumber_returns400(OrderControllerIntegrationTest.java:195)
-	at java.base/java.lang.reflect.Method.invoke(Method.java:568)
-	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
-	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
-
-com.restaurant.integration.OrderControllerIntegrationTest.trackOrder_returnsOrderDetails -- Time elapsed: 0.064 s <<< FAILURE!
-java.lang.AssertionError: Status expected:<200> but was:<403>
-	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:59)
-	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:122)
-	at org.springframework.test.web.servlet.result.StatusResultMatchers.lambda$matcher$9(StatusResultMatchers.java:637)
-	at org.springframework.test.web.servlet.MockMvc$1.andExpect(MockMvc.java:214)
-	at com.restaurant.integration.OrderControllerIntegrationTest.trackOrder_returnsOrderDetails(OrderControllerIntegrationTest.java:187)
-	at java.base/java.lang.reflect.Method.invoke(Method.java:568)
-	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
-	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
-
+Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 15.08 s -- in com.restaurant.integration.OrderControllerIntegrationTest

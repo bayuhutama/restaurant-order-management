@@ -204,6 +204,8 @@ class OrderServiceTest {
 
     @Test
     void updateOrderStatus_delivered_marksCashPaymentAsPaid() {
+        // Must be in READY state to transition to DELIVERED
+        pendingOrder.setStatus(OrderStatus.READY);
         when(orderRepository.findById(1L)).thenReturn(Optional.of(pendingOrder));
         when(orderRepository.save(any(Order.class))).thenReturn(pendingOrder);
 
@@ -222,6 +224,7 @@ class OrderServiceTest {
                 .status(PaymentStatus.PAID) // already paid
                 .amount(BigDecimal.valueOf(35000))
                 .build();
+        pendingOrder.setStatus(OrderStatus.READY);
         pendingOrder.setPayment(cardPayment);
 
         when(orderRepository.findById(1L)).thenReturn(Optional.of(pendingOrder));
@@ -231,6 +234,17 @@ class OrderServiceTest {
 
         // Card payment already PAID — paymentRepository.save should NOT be called
         verify(paymentRepository, never()).save(any());
+    }
+
+    @Test
+    void updateOrderStatus_invalidTransition_throws() {
+        // DELIVERED is a terminal state — no further transitions allowed
+        pendingOrder.setStatus(OrderStatus.DELIVERED);
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(pendingOrder));
+
+        assertThatThrownBy(() -> orderService.updateOrderStatus(1L, OrderStatus.PENDING))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Cannot transition order from DELIVERED to PENDING");
     }
 
     @Test
