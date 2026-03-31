@@ -218,7 +218,7 @@ class OrderControllerIntegrationTest {
         Long orderId = ((Number) placedBody.get("id")).longValue();
 
         // Get admin JWT
-        String adminToken = loginAs("admin", "admin123");
+        String adminToken = loginAs("admin", "Admin123!");
 
         // Update status to CONFIRMED
         mockMvc.perform(patch("/api/staff/orders/" + orderId + "/status")

@@ -53,11 +53,11 @@ class AuthServiceTest {
 
     @Test
     void register_success() {
-        RegisterRequest request = new RegisterRequest("John Doe", "johndoe", "john@example.com", "password123", "08123456789");
+        RegisterRequest request = new RegisterRequest("John Doe", "johndoe", "john@example.com", "Password123", "08123456789");
 
         when(userRepository.existsByUsername("johndoe")).thenReturn(false);
         when(userRepository.existsByEmail("john@example.com")).thenReturn(false);
-        when(passwordEncoder.encode("password123")).thenReturn("encodedPassword");
+        when(passwordEncoder.encode("Password123")).thenReturn("encodedPassword");
         when(userRepository.save(any(User.class))).thenReturn(sampleUser);
         when(jwtUtil.generateToken(sampleUser)).thenReturn("jwt-token");
 
@@ -71,7 +71,7 @@ class AuthServiceTest {
 
     @Test
     void register_duplicateUsername_throws() {
-        RegisterRequest request = new RegisterRequest("John Doe", "johndoe", "john@example.com", "password123", null);
+        RegisterRequest request = new RegisterRequest("John Doe", "johndoe", "john@example.com", "Password123", null);
 
         when(userRepository.existsByUsername("johndoe")).thenReturn(true);
 
@@ -84,7 +84,7 @@ class AuthServiceTest {
 
     @Test
     void register_duplicateEmail_throws() {
-        RegisterRequest request = new RegisterRequest("John Doe", "johndoe", "john@example.com", "password123", null);
+        RegisterRequest request = new RegisterRequest("John Doe", "johndoe", "john@example.com", "Password123", null);
 
         when(userRepository.existsByUsername("johndoe")).thenReturn(false);
         when(userRepository.existsByEmail("john@example.com")).thenReturn(true);
@@ -100,7 +100,7 @@ class AuthServiceTest {
 
     @Test
     void login_success() {
-        LoginRequest request = new LoginRequest("johndoe", "password123");
+        LoginRequest request = new LoginRequest("johndoe", "Password123");
 
         when(userRepository.findByUsername("johndoe")).thenReturn(Optional.of(sampleUser));
         when(jwtUtil.generateToken(sampleUser)).thenReturn("jwt-token");
@@ -125,7 +125,7 @@ class AuthServiceTest {
 
     @Test
     void login_unknownUsername_throws() {
-        LoginRequest request = new LoginRequest("nobody", "password123");
+        LoginRequest request = new LoginRequest("nobody", "Password123");
 
         when(userRepository.findByUsername("nobody")).thenReturn(Optional.empty());
 

@@ -37,11 +37,11 @@ public class DataInitializer implements CommandLineRunner {
                     .name("Admin")
                     .username("admin")
                     .email("admin@restaurant.com")
-                    .password(passwordEncoder.encode("admin123"))
+                    .password(passwordEncoder.encode("Admin123!"))
                     .role(Role.ADMIN)
                     .phone("0800000001")
                     .build());
-            log.info("Created default admin: admin / admin123");
+            log.info("Created default admin: admin / Admin123!");
         }
 
         if (!userRepository.existsByUsername("staff")) {
@@ -49,11 +49,11 @@ public class DataInitializer implements CommandLineRunner {
                     .name("Staff")
                     .username("staff")
                     .email("staff@restaurant.com")
-                    .password(passwordEncoder.encode("staff123"))
+                    .password(passwordEncoder.encode("Staff123!"))
                     .role(Role.STAFF)
                     .phone("0800000002")
                     .build());
-            log.info("Created default staff: staff / staff123");
+            log.info("Created default staff: staff / Staff123!");
         }
     }
 

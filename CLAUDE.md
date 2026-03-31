@@ -100,6 +100,19 @@ SQLite file (`restaurant.db`) is created automatically in whichever directory th
 
 **SQLite limitation**: Cannot `ALTER TABLE ADD COLUMN` with a UNIQUE constraint. If a new UNIQUE column is added to an entity, delete `restaurant.db` and restart — the schema will be recreated. Non-unique columns can be added via `ddl-auto=update` without deleting the DB.
 
+### Validation Summary
+
+All request DTOs use Jakarta Bean Validation (`@Valid` on every controller method). Key constraints:
+
+| DTO | Notable constraints |
+|-----|-------------------|
+| `RegisterRequest` | username 3–50 chars; password min 8, must have uppercase + number; email format |
+| `LoginRequest` | username max 50; password max 128 |
+| `OrderRequest` | tableNumber max 20; notes max 500; guestEmail validated; paymentMethod not null |
+| `OrderItemRequest` | quantity 1–100; notes max 200 |
+| `MenuItemRequest` | name max 100; description max 1000; price 0.01–99999999.99; imageUrl max 500 |
+| `CategoryRequest` | name max 100; description max 500; imageUrl max 500 |
+
 Uploaded images are stored in an `uploads/` directory alongside `restaurant.db`. The directory is created automatically on first upload. Served at `/uploads/**` as static resources — no auth required so `<img>` tags load correctly from the frontend. `upload.dir` and `app.base-url` in `application.properties` control where files are stored and what URL prefix is returned.
 
 **To migrate to PostgreSQL**, change these three lines in `application.properties`:
@@ -114,10 +127,21 @@ Then add `postgresql` to `pom.xml` dependencies and remove `sqlite-jdbc` + `hibe
 
 | Role  | Username | Password   |
 |-------|----------|------------|
-| Admin | admin    | admin123   |
-| Staff | staff    | staff123   |
+| Admin | admin    | Admin123!  |
+| Staff | staff    | Staff123!  |
 
 Seeding only runs if the user does not already exist (checked via `existsByUsername`). Menu prices are in Indonesian Rupiah (IDR).
+
+If passwords were changed, delete `restaurant.db` and restart the backend to re-seed with the new passwords.
+
+### Password Policy (registration)
+
+Enforced via `@Pattern` on `RegisterRequest.password`:
+- Minimum **8 characters**, maximum **128**
+- At least one **uppercase letter**
+- At least one **number**
+
+The seeded admin/staff accounts are saved directly (bypassing the DTO validation), so their passwords are set in `DataInitializer` and must manually comply with the policy.
 
 ### Order Status Flow
 
