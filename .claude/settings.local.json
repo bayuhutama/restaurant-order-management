@@ -1,0 +1,38 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(java -version)",
+      "Bash(mvn -version)",
+      "Bash(node -version)",
+      "Bash(npm -version)",
+      "Bash(npm --version)",
+      "Bash(where mvn:*)",
+      "Read(//c//**)",
+      "Read(//c/Program Files/Java/**)",
+      "Read(//c/Program Files/**)",
+      "Bash(choco --version)",
+      "Bash(winget --version)",
+      "Bash(npm install:*)",
+      "Bash(cmd //c \"cd C:\\\\Users\\\\bayuhutama\\\\Project\\\\Claude\\\\restaurant-order-management\\\\backend && mvnw.cmd --version\")",
+      "Bash(powershell -NoProfile -Command \"cd ''C:\\\\Users\\\\bayuhutama\\\\Project\\\\Claude\\\\restaurant-order-management\\\\backend''; .\\\\mvnw.cmd --version\")",
+      "Bash(curl -s http://localhost:8080/api/categories)",
+      "Bash(curl -s http://localhost:5173)",
+      "Bash(netstat -ano)",
+      "Bash(taskkill /PID 8844 /F)",
+      "Bash(taskkill /PID 13624 /F)",
+      "Bash(powershell -Command \"Stop-Process -Id 8844 -Force; Stop-Process -Id 13624 -Force\")",
+      "WebFetch(domain:www.paypalobjects.com)",
+      "Bash(find /c/Users/bayuhutama/Project/Claude/restaurant-order-management/backend -path */src/test/* -name *.java)",
+      "Bash(./mvnw test:*)",
+      "Bash(cmd /c \"mvnw.cmd test\")",
+      "Bash(cmd /c \"mvnw.cmd test 2>&1\")",
+      "Bash(ls:*)",
+      "Bash(JAVA_HOME=\"/c/Program Files/Java/jdk-17.0.17\" PATH=\"/c/Program Files/Java/jdk-17.0.17/bin:$PATH\" java -version 2>&1)",
+      "Bash(JAVA_HOME=\"/c/Program Files/Java/jdk-17.0.17\" PATH=\"/c/Program Files/Java/jdk-17.0.17/bin:$PATH\" cmd /c mvnw.cmd test 2>&1)",
+      "Bash(JAVA_HOME=\"/c/Program Files/Java/jdk-17.0.17\" PATH=\"/c/Program Files/Java/jdk-17.0.17/bin:$PATH\" cmd /c \"mvnw.cmd test > test-output.txt 2>&1\")",
+      "Bash(export JAVA_HOME=\"/c/Program Files/Java/jdk-17.0.17\")",
+      "Bash(export PATH=\"$JAVA_HOME/bin:$PATH\")",
+      "Bash(./mvnw.cmd test:*)"
+    ]
+  }
+}

@@ -1,0 +1,18 @@
+<template>
+  <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" @click.self="$emit('close')">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
+      <div class="flex items-center justify-between p-5 border-b">
+        <h3 class="text-lg font-bold text-gray-900">{{ title }}</h3>
+        <button @click="$emit('close')" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+      </div>
+      <div class="p-5 overflow-y-auto flex-1">
+        <slot />
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+defineProps({ title: { type: String, default: '' } })
+defineEmits(['close'])
+</script>
