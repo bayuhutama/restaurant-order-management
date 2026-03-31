@@ -37,7 +37,11 @@
       "Bash(cmd /c \"where psql & where mysql & where mongod & where sqlite3\" 2>&1)",
       "Bash(cmd /c \"sc query type= all 2>nul | findstr /i \\\\\"postgresql mysql mariadb mongo\\\\\"\" 2>&1)",
       "Bash(cmd /c \"reg query HKLM\\\\SOFTWARE\\\\PostgreSQL 2>nul & reg query HKLM\\\\SOFTWARE\\\\MySQL 2>nul & reg query HKLM\\\\SOFTWARE\\\\MariaDB 2>nul & reg query \\\\\"HKLM\\\\SOFTWARE\\\\MongoDB\\\\\" 2>nul\" 2>&1)",
-      "Bash(cmd /c \"where docker & docker --version\" 2>&1)"
+      "Bash(cmd /c \"where docker & docker --version\" 2>&1)",
+      "Bash(npm audit:*)",
+      "Bash(npm show:*)",
+      "Bash(python3 -c \"import sys,json; vs=[v for v in json.load\\(sys.stdin\\) if v.startswith\\(''''5.''''\\)]; print\\(''''Latest 5.x:'''', vs[-1]\\)\")",
+      "Bash(python3 -c \"import sys,json; vs=[v for v in json.load\\(sys.stdin\\) if v.startswith\\(''''6.''''\\)]; print\\(''''Vite 6.x versions \\(last 10\\):'''', vs[-10:]\\)\")"
     ]
   }
 }
