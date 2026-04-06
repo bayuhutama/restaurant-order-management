@@ -140,6 +140,7 @@ import { formatRupiah } from '@/utils/format'
 import Modal from '@/components/Modal.vue'
 import ImageUpload from '@/components/ImageUpload.vue'
 import { PhMagnifyingGlass, PhX } from '@phosphor-icons/vue'
+import { useDialog } from '@/composables/useDialog'
 
 const menuItems = ref([])
 const categories = ref([])
@@ -153,6 +154,7 @@ const filterAvailable = ref('')
 
 const form = ref({ name: '', description: '', price: '', imageUrl: '', categoryId: null, available: true })
 const searchQuery = ref('')
+const { showConfirm, showAlert } = useDialog()
 
 const displayedItems = computed(() => {
   return menuItems.value.filter(item => {
@@ -226,17 +228,18 @@ async function toggleAvailability(item) {
     const idx = menuItems.value.findIndex(i => i.id === item.id)
     if (idx !== -1) menuItems.value[idx] = res.data
   } catch (e) {
-    alert('Failed to update availability')
+    showAlert('Failed to update availability', 'Error')
   }
 }
 
 async function deleteItem(id) {
-  if (!confirm('Delete this menu item?')) return
+  const ok = await showConfirm('This menu item will be permanently deleted.', 'Delete menu item?', 'danger')
+  if (!ok) return
   try {
     await adminMenuApi.delete(id)
     menuItems.value = menuItems.value.filter(i => i.id !== id)
   } catch (e) {
-    alert(e.response?.data?.message || 'Failed to delete')
+    showAlert(e.response?.data?.message || 'Failed to delete', 'Error')
   }
 }
 

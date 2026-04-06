@@ -20,7 +20,7 @@
         <PhCheckCircle class="h-12 w-12 text-green-500 mx-auto mb-3" />
         <h2 class="text-xl font-bold mb-2">Payment already confirmed!</h2>
         <p class="text-gray-500 dark:text-gray-400 mb-6">This order has already been processed.</p>
-        <RouterLink :to="`/track/${order.orderNumber}`" class="btn-primary">Track Your Order</RouterLink>
+        <RouterLink to="/my-orders" class="btn-primary">My Orders</RouterLink>
       </div>
 
       <!-- Payment form -->
@@ -332,7 +332,7 @@ async function confirmPayment() {
   payError.value = ''
   try {
     await orderApi.confirmPayment(route.params.orderNumber)
-    router.push(`/track/${route.params.orderNumber}`)
+    router.push('/my-orders')
   } catch (e) {
     payError.value = e.response?.data?.message || 'Payment failed. Please try again.'
   } finally {

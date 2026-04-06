@@ -12,14 +12,18 @@ A full-stack **dine-in** restaurant order management system. Customers scan a QR
 ## Features
 
 - **QR table ordering** — Customers scan a QR code, browse the menu, and place orders without an account
-- **Real-time updates** — Orders appear instantly on the staff dashboard via WebSocket
-- **Order tracking** — Customers can track their order status live
-- **Table sessions** — Multiple orders per table accumulate into one bill; customers pay at the end
-- **Staff dashboard** — View, filter, and progress orders through the kitchen workflow
+- **Payment flow** — After ordering, customers choose QR code, card, or cash at cashier; staff can only process orders after payment is confirmed
+- **Real-time updates** — Orders and table sessions appear instantly on the staff dashboard via WebSocket
+- **My Orders** — Customers see their order history and live status scoped to their current table session
+- **Order tracking** — Customers can track individual order progress with a live stepper
+- **Table sessions** — Multiple orders per table accumulate into one bill; customers pay at the end via the bill page
+- **Staff dashboard** — Status-tab navigation (Pending / Confirmed / Preparing / Ready / All), active table session management, one-click order progression
+- **Table session management** — Staff can end a table session to free the table for the next customer; customer history clears automatically
 - **Admin panel** — Full CRUD for menu items and categories, image uploads, QR code generation, order management
 - **Responsive** — Works on mobile, tablet, and desktop
 - **Dark mode** — Automatically follows the OS/browser preference
 - **Search** — Live search on the menu page, staff dashboard, and admin views
+- **Custom dialogs** — All alerts and confirmations use styled in-app modals (no browser `alert`/`confirm`)
 
 ## Getting Started
 
@@ -71,7 +75,9 @@ The frontend starts on **http://localhost:5173**.
 |---|---|
 | `/` | Customer menu (scan `/?table=N` to set table) |
 | `/checkout` | Place order |
-| `/track/:orderNumber` | Order tracking |
+| `/payment/:orderNumber` | Payment page (QR / Card / Cash) |
+| `/track/:orderNumber` | Order tracking stepper |
+| `/my-orders` | Customer order history for current table |
 | `/table/:tableNumber/bill` | Table bill & payment |
 | `/staff/login` | Staff login |
 | `/staff` | Staff order dashboard |
@@ -87,4 +93,12 @@ The frontend starts on **http://localhost:5173**.
 PENDING → CONFIRMED → PREPARING → READY → DELIVERED
 ```
 
-Staff progress orders through each stage using action buttons on the dashboard.
+Orders are placed as `PENDING` and immediately visible to staff. Staff can only advance an order to `CONFIRMED` after the customer's payment is confirmed.
+
+## Payment Flow
+
+1. Customer places order → redirected to `/payment/:orderNumber`
+2. Customer selects payment method: **QR Code**, **Card** (Luhn-validated), or **Cash at Cashier**
+3. Customer confirms payment → order payment marked PAID
+4. Staff sees the order as payable and can confirm it
+5. For whole-table settlement, staff or customer visits `/table/:tableNumber/bill`

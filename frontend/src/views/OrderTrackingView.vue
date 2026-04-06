@@ -150,9 +150,6 @@
         </div>
       </div>
 
-      <div class="text-center">
-        <RouterLink to="/" class="btn-secondary inline-flex items-center gap-1"><PhArrowLeft class="h-4 w-4" />Back to Menu</RouterLink>
-      </div>
     </div>
   </div>
 </template>
@@ -164,7 +161,7 @@ import { orderApi } from '@/api'
 import { formatRupiah } from '@/utils/format'
 import { useWebSocket } from '@/composables/useWebSocket'
 import OrderStatusBadge from '@/components/OrderStatusBadge.vue'
-import { PhCheck, PhArrowLeft } from '@phosphor-icons/vue'
+import { PhCheck } from '@phosphor-icons/vue'
 
 const route = useRoute()
 const order = ref(null)

@@ -60,6 +60,22 @@ public class TableSessionService {
                 .map(this::mapToResponse);
     }
 
+    public List<TableSessionResponse> getOpenSessions() {
+        return tableSessionRepository
+                .findByStatusOrderByOpenedAtDesc(TableSessionStatus.OPEN)
+                .stream().map(this::mapToResponse).toList();
+    }
+
+    @Transactional
+    public void closeSession(String tableNumber) {
+        TableSession session = tableSessionRepository
+                .findByTableNumberAndStatusForUpdate(tableNumber, TableSessionStatus.OPEN)
+                .orElseThrow(() -> new RuntimeException("No active session for table: " + tableNumber));
+        session.setStatus(TableSessionStatus.EXPIRED);
+        session.setClosedAt(LocalDateTime.now());
+        tableSessionRepository.save(session);
+    }
+
     @Transactional
     public TableSessionResponse paySession(String tableNumber, PaySessionRequest request) {
         TableSession session = tableSessionRepository

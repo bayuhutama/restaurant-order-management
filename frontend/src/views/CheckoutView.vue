@@ -108,11 +108,13 @@ import { useRouter } from 'vue-router'
 import { useCartStore } from '@/stores/cart'
 import { formatRupiah } from '@/utils/format'
 import { useTableStore } from '@/stores/table'
+import { useOrdersStore } from '@/stores/orders'
 import { orderApi } from '@/api'
 import { PhCheck } from '@phosphor-icons/vue'
 
 const cart = useCartStore()
 const tableStore = useTableStore()
+const ordersStore = useOrdersStore()
 const router = useRouter()
 
 const form = ref({
@@ -156,6 +158,11 @@ async function submitOrder() {
   try {
     const res = await orderApi.placeOrder(payload)
     cart.clearCart()
+    // If table was entered manually (not from QR), persist it to the table store
+    if (!tableStore.tableNumber) {
+      tableStore.setTable(form.value.tableNumber.trim())
+    }
+    ordersStore.addOrder(res.data.orderNumber, effectiveTable.value)
     router.push(`/payment/${res.data.orderNumber}`)
   } catch (e) {
     error.value = e.response?.data?.message || 'Failed to place order. Please try again.'

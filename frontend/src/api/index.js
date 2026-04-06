@@ -46,7 +46,9 @@ export const tableSessionApi = {
 export const staffApi = {
   getOrders: (activeOnly = false) => api.get('/staff/orders', { params: { activeOnly } }),
   getOrder: (id) => api.get(`/staff/orders/${id}`),
-  updateStatus: (id, status) => api.patch(`/staff/orders/${id}/status`, { status })
+  updateStatus: (id, status) => api.patch(`/staff/orders/${id}/status`, { status }),
+  getOpenSessions: () => api.get('/staff/tables'),
+  closeSession: (tableNumber) => api.post(`/staff/tables/${tableNumber}/close`)
 }
 
 // Admin - File Upload

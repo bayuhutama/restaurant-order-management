@@ -9,6 +9,7 @@ const router = createRouter({
     { path: '/checkout', name: 'checkout', component: () => import('@/views/CheckoutView.vue') },
     { path: '/payment/:orderNumber', name: 'payment', component: () => import('@/views/PaymentView.vue') },
     { path: '/track/:orderNumber', name: 'track', component: () => import('@/views/OrderTrackingView.vue') },
+    { path: '/my-orders', name: 'my-orders', component: () => import('@/views/MyOrdersView.vue') },
     { path: '/table/:tableNumber/bill', name: 'table-bill', component: () => import('@/views/TableBillView.vue') },
 
     // ── Staff ──────────────────────────────────────────────────────────────

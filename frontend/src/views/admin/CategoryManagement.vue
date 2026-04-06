@@ -61,8 +61,10 @@ import { ref, onMounted } from 'vue'
 import { menuApi, adminCategoryApi } from '@/api'
 import Modal from '@/components/Modal.vue'
 import ImageUpload from '@/components/ImageUpload.vue'
+import { useDialog } from '@/composables/useDialog'
 
 const categories = ref([])
+const { showConfirm, showAlert } = useDialog()
 const loading = ref(true)
 const showModal = ref(false)
 const editing = ref(null)
@@ -115,12 +117,13 @@ async function save() {
 }
 
 async function deleteCategory(id) {
-  if (!confirm('Delete this category?')) return
+  const ok = await showConfirm('This category will be permanently deleted.', 'Delete category?', 'danger')
+  if (!ok) return
   try {
     await adminCategoryApi.delete(id)
     categories.value = categories.value.filter(c => c.id !== id)
   } catch (e) {
-    alert(e.response?.data?.message || 'Failed to delete')
+    showAlert(e.response?.data?.message || 'Failed to delete', 'Error')
   }
 }
 

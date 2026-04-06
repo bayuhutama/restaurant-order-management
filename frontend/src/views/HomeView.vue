@@ -16,7 +16,7 @@
 
     <!-- Running bill banner -->
     <div
-      v-if="tableStore.tableNumber && activeSession && activeSession.orderCount > 0"
+      v-if="tableStore.tableNumber && activeSession && hasUnpaidOrders"
       class="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl p-4 mb-6 flex items-center justify-between"
     >
       <span class="text-sm text-gray-700 dark:text-gray-300 font-medium">
@@ -122,6 +122,10 @@ const loading = ref(true)
 const trackNumber = ref('')
 const activeSession = ref(null)
 const searchQuery = ref('')
+
+const hasUnpaidOrders = computed(() =>
+  activeSession.value?.orders?.some(o => o.payment?.status !== 'PAID') ?? false
+)
 
 const filteredItems = computed(() => {
   let items = menuItems.value.filter(i => i.available)

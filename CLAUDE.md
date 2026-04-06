@@ -4,10 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Full-stack **dine-in** restaurant order management system (brand name: **Savoria**) with three roles: Guest/Customer (table-based ordering via QR code), Staff (real-time order dashboard), Admin (menu/category CRUD, order management).
+Full-stack **dine-in** restaurant order management system (brand name: **Savoria**) with three roles: Guest/Customer (table-based ordering via QR code), Staff (real-time order dashboard with session management), Admin (menu/category CRUD, order management).
 
 - **Backend**: Spring Boot 3.2.3 (Java 17), MySQL 8.0, JWT, WebSocket (STOMP)
-- **Frontend**: Vue 3, Vite, Tailwind CSS, Pinia, Vue Router, Axios, @stomp/stompjs, @phosphor-icons/vue
+- **Frontend**: Vue 3, Vite, Tailwind CSS, Pinia, Vue Router, Axios, @stomp/stompjs, @phosphor-icons/vue, qrcode
 
 This is a **dine-in only** restaurant system — no delivery, no takeaway. Customers sit at a table, scan a QR code, place orders, and food is brought to the table by staff.
 
@@ -35,134 +35,140 @@ npm run build                # Production build
 
 ### Backend Package Structure (`backend/src/main/java/com/restaurant/`)
 
-- **`model/`** — JPA entities: `User` (fields: id, name, username, email, password, phone, role, createdAt — `username` is the login identifier, `email` kept for contact), `Category`, `MenuItem`, `Order` (has `@ManyToOne TableSession`), `OrderItem`, `Payment`, `TableSession`. Enums in `model/enums/`: `Role`, `OrderStatus`, `PaymentMethod`, `PaymentStatus`, `TableSessionStatus`.
+- **`model/`** — JPA entities: `User`, `Category`, `MenuItem`, `Order` (`@ManyToOne TableSession`), `OrderItem`, `Payment`, `TableSession`. Enums in `model/enums/`: `Role`, `OrderStatus`, `PaymentMethod`, `PaymentStatus`, `TableSessionStatus`.
 - **`repository/`** — Spring Data JPA repositories, one per entity.
 - **`dto/`** — Request/response records grouped by domain: `dto/auth/`, `dto/menu/`, `dto/order/`.
-- **`security/`** — `JwtUtil` (token generation/validation with jjwt 0.12.x API), `JwtAuthenticationFilter` (per-request filter), `UserDetailsServiceImpl`.
-- **`config/`** — `SecurityConfig` (endpoint authorization + CORS), `WebSocketConfig` (STOMP broker), `WebConfig` (serves `uploads/` dir as static resource at `/uploads/**`), `DataInitializer` (seeds admin/staff users + sample menu on first run), `GlobalExceptionHandler`.
-- **`service/`** — Business logic: `AuthService`, `MenuService`, `OrderService` (WebSocket broadcast via `SimpMessagingTemplate`; uses `@Lazy` setter injection for `TableSessionService` to avoid circular dependency), `TableSessionService` (session lifecycle + `@Scheduled` expiry), `FileUploadService` (validates type/size, saves with UUID filename, returns absolute URL).
-- **`controller/`** — `AuthController` (`/api/auth/**`), `MenuController` (public GET `/api/categories/**` and `/api/menu/**`), `OrderController` (`/api/orders`), `StaffController` (`/api/staff/**`, requires STAFF or ADMIN), `AdminController` (`/api/admin/**`, requires ADMIN), `FileUploadController` (`POST /api/admin/upload`, requires ADMIN), `TableSessionController` (`/api/table-sessions/**`, public).
+- **`security/`** — `JwtUtil` (jjwt 0.12.x), `JwtAuthenticationFilter`, `UserDetailsServiceImpl`.
+- **`config/`** — `SecurityConfig`, `WebSocketConfig`, `WebConfig` (serves `/uploads/**`), `DataInitializer` (seeds admin/staff + sample menu), `GlobalExceptionHandler`.
+- **`service/`** — `AuthService`, `MenuService`, `OrderService` (WebSocket broadcast; `@Lazy` setter injection for `TableSessionService` to break circular dependency), `TableSessionService`, `FileUploadService`.
+- **`controller/`** — `AuthController` (`/api/auth/**`), `MenuController` (public), `OrderController` (`/api/orders`), `StaffController` (`/api/staff/**`, STAFF or ADMIN), `AdminController` (`/api/admin/**`, ADMIN), `FileUploadController`, `TableSessionController` (`/api/table-sessions/**`, public).
 
 ### Security / Auth Flow
 
-JWT is passed as `Authorization: Bearer <token>`. `JwtAuthenticationFilter` processes tokens on every request but does not require them — public endpoints work without a token, `@AuthenticationPrincipal` returns `null` for unauthenticated requests. Role authorization is enforced both in `SecurityConfig` (URL-level) and via `@PreAuthorize` on controllers (method-level, enabled by `@EnableMethodSecurity`).
+JWT passed as `Authorization: Bearer <token>`. Public endpoints work without a token. Login uses **username** (not email).
 
-Login uses **username** (not email). `LoginRequest` sends `{ username, password }`; `RegisterRequest` sends `{ name, username, email, password, phone }`. `AuthResponse` returns `username` (not email). `UserDetailsServiceImpl` loads users by `username`.
+Guest ordering: `POST /api/orders` is `permitAll`. Controller checks `@AuthenticationPrincipal`; if null, uses `guestName`/`guestPhone` from request body.
 
-Guest ordering: `POST /api/orders` is `permitAll`. The controller checks if `@AuthenticationPrincipal` is present; if not, it uses `guestName`/`guestPhone` from the request body.
+### Payment Flow
+
+Orders are placed as `PENDING` immediately. Staff **cannot** advance an order from `PENDING → CONFIRMED` until `payment.status == PAID`.
+
+1. Customer places order → `POST /api/orders` → order status `PENDING`, payment status `PENDING`
+2. Customer goes to `/payment/:orderNumber` — chooses QR / Card / Cash
+3. Customer clicks confirm → `POST /api/orders/{orderNumber}/pay` → payment marked `PAID`
+4. Staff can now confirm the order
+
+`confirmPayment` in `OrderService` checks `payment.status == PAID` (not the old `AWAITING_PAYMENT` status). The `AWAITING_PAYMENT` order status exists in the enum but is no longer used.
 
 ### WebSocket (Real-time)
 
 - Endpoint: `/ws` with SockJS fallback.
-- Vite config requires `define: { global: 'globalThis' }` to fix `global is not defined` error from sockjs-client.
+- Vite config requires `define: { global: 'globalThis' }` to fix `global is not defined` from sockjs-client.
 - Staff subscribes to `/topic/orders` — receives every order update.
 - Customers subscribe to `/topic/orders/{orderNumber}` — receives updates for their specific order.
-- Server pushes via `SimpMessagingTemplate.convertAndSend(...)` inside `OrderService.updateOrderStatus()` and `placeOrder()`.
+- Server pushes via `SimpMessagingTemplate` inside `OrderService.updateOrderStatus()` and `placeOrder()` and `confirmPayment()`.
 
 ### Table Session Feature
 
-Multiple customers at the same table can each place individual orders — they accumulate under one `TableSession` per table.
+Multiple customers at the same table place individual orders that accumulate under one `TableSession`.
 
 - **`TableSession`** entity: `tableNumber`, `status` (OPEN/PAID/EXPIRED), `openedAt`, `lastActivityAt`, `closedAt`, `paymentMethod`, `@OneToMany orders`.
 - **`TableSessionStatus`** enum: `OPEN, PAID, EXPIRED`.
-- **Flow**: On order placement, `OrderService` calls `TableSessionService.getOrCreateSession(tableNumber)` to get or create an OPEN session, then links the new order to it. `lastActivityAt` is updated on each order (`touchSession`).
-- **Expiry**: `@Scheduled(fixedDelay=60_000)` in `TableSessionService` runs every minute and marks sessions EXPIRED if `lastActivityAt` is older than the configured timeout (default 60 minutes, set via `table.session.timeout-minutes` in `application.properties`).
-- **Payment**: `POST /api/table-sessions/{tableNumber}/pay` with `{ paymentMethod }` marks the session PAID and all its orders DELIVERED.
-- **Bill page** (`/table/:tableNumber/bill`): shows all orders and items for the table, grand total, and payment form.
-- **Running bill banner**: shown on the home page when the scanned table has an active session with orders.
-- **Circular dependency**: `OrderService` → `TableSessionService` → `OrderService` is broken with `@Lazy` setter injection for `TableSessionService` in `OrderService`.
+- **Flow**: On order placement, `OrderService` calls `TableSessionService.getOrCreateSession(tableNumber)`.
+- **Expiry**: `@Scheduled(fixedDelay=60_000)` marks sessions EXPIRED if `lastActivityAt` older than timeout (default 60 min, `table.session.timeout-minutes`).
+- **Staff close**: `POST /api/staff/tables/{tableNumber}/close` marks session EXPIRED immediately — frees the table for the next customer.
+- **Payment**: `POST /api/table-sessions/{tableNumber}/pay` marks session PAID and all orders DELIVERED.
+- **Circular dependency**: broken with `@Lazy` setter injection for `TableSessionService` in `OrderService`.
+
+### Staff Endpoints
+
+`StaffController` (`/api/staff/**`, requires STAFF or ADMIN):
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/staff/orders` | List orders (`?activeOnly=false`) |
+| PATCH | `/api/staff/orders/{id}/status` | Advance order status (no cancel) |
+| GET | `/api/staff/tables` | List all OPEN table sessions |
+| POST | `/api/staff/tables/{tableNumber}/close` | End a table session (marks EXPIRED) |
 
 ### QR Code / Table Flow
 
-- Admin generates QR codes via the Tables admin page (`/admin/tables`). Each QR encodes `/?table=<number>`.
-- Scanning sets `tableStore.tableNumber` in the Pinia store (persisted to `localStorage`), and the table number is shown as a fixed badge on the menu page.
-- At checkout, if `tableStore.tableNumber` is set, it is shown as locked (from QR scan); otherwise the customer can manually enter a table number.
-- `paymentMethod` is hardcoded to `CASH` in `CheckoutView` — the per-table bill payment page handles actual payment method selection.
+- Admin generates QR codes via `/admin/tables`. Each QR encodes `/?table=<number>`.
+- Scanning sets `tableStore.tableNumber` (sessionStorage). Table shown as fixed badge on menu.
+- At checkout, locked if from QR scan; otherwise customer enters manually. Manual entry also sets `tableStore`.
+- After checkout, table number is saved alongside the order number in `ordersStore` (localStorage).
 
 ### Frontend Structure (`frontend/src/`)
 
-- **`api/index.js`** — All Axios calls organized by domain (`authApi`, `menuApi`, `orderApi`, `staffApi`, `adminCategoryApi`, `adminMenuApi`, `adminOrderApi`, `uploadApi`, `tableSessionApi`). JWT token auto-attached via request interceptor. `uploadApi.uploadImage(file)` sends `multipart/form-data`. `tableSessionApi` has `getSession(tableNumber)` and `paySession(tableNumber, { paymentMethod })`.
-- **`stores/auth.js`** — Pinia store with `isAuthenticated`, `isAdmin`, `isStaff`, `isCustomer` computed getters. Persists token + user to `localStorage`. `login(username, password)` sends `{ username, password }`.
-- **`stores/cart.js`** — Cart state persisted to `localStorage`.
-- **`stores/table.js`** — Pinia store for `tableNumber` (set from QR scan query param).
-- **`composables/useWebSocket.js`** — Wraps `@stomp/stompjs` Client with `connect(onConnected)` / `subscribe(destination, cb)`. Auto-disconnects on component unmount.
-- **`router/index.js`** — Route guards check `auth.isAuthenticated` and role. `meta.requiresRole: 'ADMIN'` or `'STAFF'` enforced before navigation. Includes `/table/:tableNumber/bill` route.
-- **`components/ImageUpload.vue`** — Reusable image uploader. Supports drag & drop, click-to-browse, and URL paste. Shows instant local preview via `createObjectURL` while uploading, then replaces with server URL. Emits `update:modelValue` (v-model compatible).
-- **`components/MenuCard.vue`** — Equal-height cards (`flex flex-col h-full`). Description uses `line-clamp-2` with a CSS-only tooltip (`peer`/`peer-hover:block`) showing full text on hover.
-- **`components/Modal.vue`** — Reusable modal dialog. Closes on backdrop click. Used by admin CRUD forms.
-- **`components/OrderStatusBadge.vue`** — Colored dot badge with pulsing animation for active statuses. Dark mode variants included in the config object strings.
-- **`views/TableBillView.vue`** — Table bill page: lists all orders and items, shows grand total, payment method selection (CASH/CARD with card validation), calls `paySession`.
-- **`views/OrderTrackingView.vue`** — Vertical stepper showing order progress. Steps: PENDING→"Order Received", CONFIRMED→"Order Confirmed", PREPARING→"Being Prepared", READY→"Ready to Serve", DELIVERED→"Served". Active step has pulsing orange ring.
-- **`views/PaymentView.vue`** — Per-order payment page. CARD payment has full client-side validation: Luhn algorithm for card number, expiry format/future check, CVV length, cardholder name.
+- **`api/index.js`** — All Axios calls. `staffApi` includes `getOpenSessions()` and `closeSession(tableNumber)`. `tableSessionApi` has `getSession(tableNumber)` and `paySession(tableNumber, { paymentMethod })`.
+- **`stores/auth.js`** — Pinia store. Persists token + user to `localStorage`.
+- **`stores/cart.js`** — Cart state, persisted to `localStorage`.
+- **`stores/table.js`** — `tableNumber` in `sessionStorage` (clears on tab close). `setTable(n)` / `clearTable()`.
+- **`stores/orders.js`** — Persists `[{ orderNumber, tableNumber }]` to `localStorage`. `addOrder(orderNumber, tableNumber)`, `getNumbersForTable(tableNumber)`, `removeOrder(orderNumber)`. Scopes order history to the current table.
+- **`composables/useWebSocket.js`** — Wraps `@stomp/stompjs` Client. Auto-disconnects on unmount.
+- **`composables/useDialog.js`** — Module-level singleton for custom alert/confirm dialogs. Returns promises. `showAlert(message, title)` and `showConfirm(message, title, variant)`. Replaces all native `alert()`/`confirm()` calls.
+- **`components/AppDialog.vue`** — The dialog UI. Mounted in `App.vue` via `<Teleport to="body">`. Reads from `useDialog` state. Two variants: `alert` (OK button) and `confirm` (Cancel + Confirm). `danger` variant uses red styling.
+- **`components/Modal.vue`** — Reusable modal for admin CRUD forms.
+- **`components/OrderStatusBadge.vue`** — Colored badge. Dark mode class strings written in full in the config object so Tailwind scanner picks them up.
+- **`components/ImageUpload.vue`** — Drag & drop / click / URL paste image uploader. v-model compatible.
+- **`components/MenuCard.vue`** — Equal-height cards. Description uses `line-clamp-2` with CSS tooltip on hover.
+- **`router/index.js`** — Route guards. Includes `/my-orders`, `/payment/:orderNumber`, `/table/:tableNumber/bill`.
+- **`views/PaymentView.vue`** — Three payment tabs: QR Code (generated with `qrcode` library from order ref), Card (Luhn validation), Cash at Cashier. Redirects to `/my-orders` after confirmation.
+- **`views/MyOrdersView.vue`** — Shows order history scoped to `tableStore.tableNumber`. On load, checks if the table session is still OPEN (via `tableSessionApi.getSession`). If session is ended, clears orders for that table and resets the table store. Shows three states: no table selected / no orders placed / order list.
+- **`views/OrderTrackingView.vue`** — Live stepper: PENDING→CONFIRMED→PREPARING→READY→DELIVERED.
+- **`views/TableBillView.vue`** — Table bill with payment method selection (CASH/CARD).
+- **`views/staff/StaffDashboard.vue`** — Full redesign: status tabs (Active/Pending/Confirmed/Preparing/Ready/All) with live counts, horizontal-scrolling active table cards, color-coded order cards with elapsed time and full-width action buttons.
+
+### My Orders / Session Scoping
+
+- `ordersStore` stores `{ orderNumber, tableNumber }` pairs in `localStorage`.
+- `MyOrdersView` and `Navbar` only show/count orders matching `tableStore.tableNumber`.
+- When `MyOrdersView` loads and there are stored orders, it calls `tableSessionApi.getSession(tableNumber)`. A 404 means the session was ended by staff → clears all orders for that table and resets `tableStore`.
+- The Navbar polls every 30s and does the same check.
+- If table is set but no orders exist yet (no session), shows "No orders have been placed" without clearing the table.
+
+### Running Bill Banner
+
+Shown on `HomeView` when `tableStore.tableNumber` is set and `activeSession` has at least one order with `payment.status !== 'PAID'`. Disappears once all orders are paid. Condition: `hasUnpaidOrders` computed.
+
+### Staff Dashboard Design
+
+- **Header**: search bar, refresh button, username, logout — all in the top bar.
+- **Active Tables**: horizontal scroll row, compact cards (T5, order count, total, End Session).
+- **Status tabs**: Active | Pending | Confirmed | Preparing | Ready | All — each with a live count badge. Replaces the old "Active Only / All Orders" toggle.
+- **Order cards**: colored top border + table number badge, customer + elapsed time, bold item quantities, full-width action button colored by next stage (blue→Confirm, purple→Start Cooking, green→Mark Ready, orange→Mark Served). Loading spinner inside button while updating.
+- Sessions reload on every WebSocket order event (new orders create sessions) and on Refresh.
 
 ### Responsive Design
 
-The frontend is fully responsive using Tailwind CSS breakpoints (`sm`/`lg`/`xl`). Key patterns:
-- **Admin sidebar** (`AdminLayout.vue`): hidden on mobile, toggled via hamburger button (`PhList`). Overlay closes it on tap.
-- **Tables** (admin orders, menu management): wrapped in `overflow-x-auto` with `min-w-[Npx]` so they scroll horizontally on mobile rather than breaking layout.
-- **Admin config forms**: `flex-col sm:flex-row` to stack vertically on mobile.
-- **Touch targets**: quantity buttons in `CartDrawer` are `w-9 h-9` (36px) for comfortable touch.
+Tailwind CSS breakpoints (`sm`/`lg`/`xl`). Admin sidebar hidden on mobile (hamburger toggle). Tables wrapped in `overflow-x-auto` with `min-w-[Npx]`. Touch targets ≥36px.
 
 ### Dark Mode
 
-Dark mode uses `darkMode: 'media'` in `tailwind.config.js` — automatically activates when the OS/browser is set to dark mode. No manual toggle exists.
-
-- **Global base styles** in `src/assets/main.css`: `.card`, `.input`, `.label`, `.btn-secondary` all include `dark:` variants.
-- **Body**: `bg-gray-50 dark:bg-gray-900`, `text-gray-900 dark:text-gray-100`.
-- Color-coded banners (orange/red/green/blue) use `/20` or `/40` opacity tints in dark mode instead of solid light backgrounds (e.g. `dark:bg-orange-900/20`).
-- `OrderStatusBadge` colors are defined as complete class strings (including `dark:` variants) directly in the `configs` object so Tailwind's content scanner picks them up during build.
+`darkMode: 'media'` in `tailwind.config.js`. Auto-detects OS preference. Global classes in `main.css` include `dark:` variants. No manual toggle.
 
 ### Search
 
-Client-side filtering (data already loaded in memory), reactive via `computed`:
+Client-side `computed` filtering (reactive, no network calls):
 
 | View | Searches by |
 |---|---|
-| `HomeView.vue` | Menu item name or description; works alongside category filter |
+| `HomeView.vue` | Item name or description + category filter |
 | `StaffDashboard.vue` | Order number, customer name, phone, table number |
 | `admin/OrdersView.vue` | Order number, customer name, phone, table number |
-| `admin/MenuManagement.vue` | Item name or description; works alongside category/availability filters |
-
-Each search input has a clear (✕) button and shows a contextual empty state message.
+| `admin/MenuManagement.vue` | Item name or description + category/availability filters |
 
 ### Database
 
-MySQL 8.0. `spring.jpa.hibernate.ddl-auto=update` handles schema creation automatically on startup.
+MySQL 8.0. `spring.jpa.hibernate.ddl-auto=update`. Connection defaults overridable via `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` env vars. Create DB manually before first run:
 
-**Connection defaults** (overridable via env vars):
-- `DB_URL` → `jdbc:mysql://localhost:3306/restaurant?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true`
-- `DB_USERNAME` → `root`
-- `DB_PASSWORD` → `admin`
-
-The `restaurant` database must be created manually before first run:
 ```sql
 CREATE DATABASE restaurant CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-Use DBeaver or MySQL Workbench to inspect the database (host: localhost, port: 3306).
+### Validation
 
-### Validation Summary
-
-All request DTOs use Jakarta Bean Validation (`@Valid` on every controller method). Key constraints:
-
-| DTO | Notable constraints |
-|-----|-------------------|
-| `RegisterRequest` | username 3–50 chars; password min 8, must have uppercase + number; email format |
-| `LoginRequest` | username max 50; password max 128 |
-| `OrderRequest` | tableNumber max 20; notes max 500; guestEmail validated; paymentMethod not null |
-| `OrderItemRequest` | quantity 1–100; notes max 200 |
-| `MenuItemRequest` | name max 100; description max 1000; price 0.01–99999999.99; imageUrl max 500 |
-| `CategoryRequest` | name max 100; description max 500; imageUrl max 500 |
-
-Uploaded images are stored in an `uploads/` directory. The directory is created automatically on first upload. Served at `/uploads/**` as static resources — no auth required so `<img>` tags load correctly from the frontend. `upload.dir` and `app.base-url` in `application.properties` control where files are stored and what URL prefix is returned.
-
-**To migrate to PostgreSQL**, change these lines in `application.properties` and `pom.xml`:
-```properties
-spring.datasource.url=jdbc:postgresql://localhost:5432/restaurant
-spring.datasource.driver-class-name=org.postgresql.Driver
-spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
-```
-Then replace `mysql-connector-j` with `postgresql` in `pom.xml`.
+All DTOs use `@Valid`. Key constraints: username 3–50 chars, password ≥8 chars with uppercase + number, tableNumber max 20, notes max 500, price 0.01–99999999.99.
 
 ### Default Seeded Accounts
 
@@ -171,27 +177,14 @@ Then replace `mysql-connector-j` with `postgresql` in `pom.xml`.
 | Admin | admin    | Admin123!  |
 | Staff | staff    | Staff123!  |
 
-Seeding only runs if the user does not already exist (checked via `existsByUsername`). Menu prices are in Indonesian Rupiah (IDR).
-
-If passwords were changed, delete all rows from the `users` table and restart the backend to re-seed with the new passwords.
-
-### Password Policy (registration)
-
-Enforced via `@Pattern` on `RegisterRequest.password`:
-- Minimum **8 characters**, maximum **128**
-- At least one **uppercase letter**
-- At least one **number**
-
-The seeded admin/staff accounts are saved directly (bypassing the DTO validation), so their passwords are set in `DataInitializer` and must manually comply with the policy.
+Seeding only runs if the user doesn't exist (`existsByUsername`). Prices are in Indonesian Rupiah (IDR).
 
 ### Order Status Flow
 
 `PENDING` → `CONFIRMED` → `PREPARING` → `READY` → `DELIVERED`
 
-Orders go directly to `PENDING` on placement — staff sees them immediately via WebSocket. The `AWAITING_PAYMENT` status exists in the enum but is no longer used in the standard dine-in flow.
-
-**Cancellation**: Staff cannot cancel orders (enforced in `StaffController`). Admins can cancel via the admin orders view.
-
-**Payment**: Handled at the table session level via `/table/:tableNumber/bill`. `CARD` is simulated (no real gateway). `CASH` is the default method set at checkout; actual payment method is confirmed on the bill page.
-
-**Staff dashboard** (`/staff`): shows live orders grouped by status. Action buttons: "Confirm Order", "Start Cooking", "Mark Ready", "Mark Served". No cancel button for staff.
+**Key rules:**
+- Orders placed → immediately `PENDING`, staff notified via WebSocket
+- `PENDING → CONFIRMED` blocked until `payment.status == PAID`
+- Staff cannot cancel (enforced in `StaffController`); admins can
+- On DELIVERED, any remaining PENDING cash payment is auto-marked PAID

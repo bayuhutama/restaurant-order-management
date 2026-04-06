@@ -4,6 +4,7 @@
     <main class="flex-1">
       <RouterView />
     </main>
+    <AppDialog />
   </div>
 </template>
 
@@ -11,6 +12,7 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import Navbar from '@/components/Navbar.vue'
+import AppDialog from '@/components/AppDialog.vue'
 
 const route = useRoute()
 

@@ -93,10 +93,12 @@ import { adminOrderApi } from '@/api'
 import { formatRupiah } from '@/utils/format'
 import OrderStatusBadge from '@/components/OrderStatusBadge.vue'
 import { PhArrowCounterClockwise, PhMagnifyingGlass, PhX } from '@phosphor-icons/vue'
+import { useDialog } from '@/composables/useDialog'
 
 const orders = ref([])
 const loading = ref(true)
 const searchQuery = ref('')
+const { showAlert } = useDialog()
 
 const filteredOrders = computed(() => {
   if (!searchQuery.value.trim()) return orders.value
@@ -125,7 +127,7 @@ async function updateStatus(orderId, status) {
     const idx = orders.value.findIndex(o => o.id === orderId)
     if (idx !== -1) orders.value[idx] = res.data
   } catch (e) {
-    alert('Failed to update status')
+    showAlert(e.response?.data?.message || 'Failed to update status', 'Error')
   }
 }
 

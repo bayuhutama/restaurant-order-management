@@ -52,7 +52,10 @@
       "Bash(grep -c \"<svg\" /c/Users/bayuhutama/Project/Claude/restaurant-order-management/frontend/src/views/*.vue)",
       "Bash(grep -v \":0$\")",
       "Bash(find:*)",
-      "Bash(npm uninstall:*)"
+      "Bash(npm uninstall:*)",
+      "Bash(npm run:*)",
+      "Bash(./mvnw clean:*)",
+      "Bash(cmd /c \"mvnw.cmd clean package -q -DskipTests\")"
     ]
   }
 }
