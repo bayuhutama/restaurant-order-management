@@ -114,39 +114,33 @@ public class OrderService {
     }
 
     /**
-     * Customer confirms payment. Moves order from AWAITING_PAYMENT → PENDING
-     * and notifies staff via WebSocket.
+     * Customer confirms payment on the payment page.
+     * Marks the payment as PAID and notifies staff via WebSocket.
      */
     @Transactional
     public OrderResponse confirmPayment(String orderNumber) {
         Order order = orderRepository.findByOrderNumber(orderNumber)
                 .orElseThrow(() -> new RuntimeException("Order not found: " + orderNumber));
 
-        if (order.getStatus() != OrderStatus.AWAITING_PAYMENT) {
-            throw new RuntimeException("Order is not awaiting payment");
-        }
-
         Payment payment = order.getPayment();
         if (payment == null) {
             throw new RuntimeException("Payment record not found");
         }
 
-        // Confirm payment based on method
-        if (payment.getMethod() == PaymentMethod.CARD) {
-            payment.setStatus(PaymentStatus.PAID);
-            payment.setTransactionId("TXN-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
-            payment.setPaidAt(LocalDateTime.now());
+        if (payment.getStatus() == PaymentStatus.PAID) {
+            throw new RuntimeException("Order has already been paid");
         }
-        // CASH: stays PENDING — will be collected on delivery
+
+        payment.setStatus(PaymentStatus.PAID);
+        payment.setTransactionId("TXN-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
+        payment.setPaidAt(LocalDateTime.now());
         paymentRepository.save(payment);
 
-        order.setStatus(OrderStatus.PENDING);
         Order saved = orderRepository.save(order);
         saved.setPayment(payment);
 
         OrderResponse response = mapToResponse(saved);
 
-        // Now notify staff — order is paid and ready to process
         messagingTemplate.convertAndSend("/topic/orders", response);
         messagingTemplate.convertAndSend("/topic/orders/" + saved.getOrderNumber(), response);
 
