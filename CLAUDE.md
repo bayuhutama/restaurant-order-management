@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Full-stack **dine-in** restaurant order management system (brand name: **Savoria**) with three roles: Guest/Customer (table-based ordering via QR code), Staff (real-time order dashboard), Admin (menu/category CRUD, order management).
 
 - **Backend**: Spring Boot 3.2.3 (Java 17), MySQL 8.0, JWT, WebSocket (STOMP)
-- **Frontend**: Vue 3, Vite, Tailwind CSS, Pinia, Vue Router, Axios, @stomp/stompjs
+- **Frontend**: Vue 3, Vite, Tailwind CSS, Pinia, Vue Router, Axios, @stomp/stompjs, @phosphor-icons/vue
 
 This is a **dine-in only** restaurant system — no delivery, no takeaway. Customers sit at a table, scan a QR code, place orders, and food is brought to the table by staff.
 
@@ -89,10 +89,41 @@ Multiple customers at the same table can each place individual orders — they a
 - **`router/index.js`** — Route guards check `auth.isAuthenticated` and role. `meta.requiresRole: 'ADMIN'` or `'STAFF'` enforced before navigation. Includes `/table/:tableNumber/bill` route.
 - **`components/ImageUpload.vue`** — Reusable image uploader. Supports drag & drop, click-to-browse, and URL paste. Shows instant local preview via `createObjectURL` while uploading, then replaces with server URL. Emits `update:modelValue` (v-model compatible).
 - **`components/MenuCard.vue`** — Equal-height cards (`flex flex-col h-full`). Description uses `line-clamp-2` with a CSS-only tooltip (`peer`/`peer-hover:block`) showing full text on hover.
-- **`components/OrderStatusBadge.vue`** — Colored dot badge with pulsing animation for active statuses. No emojis.
+- **`components/Modal.vue`** — Reusable modal dialog. Closes on backdrop click. Used by admin CRUD forms.
+- **`components/OrderStatusBadge.vue`** — Colored dot badge with pulsing animation for active statuses. Dark mode variants included in the config object strings.
 - **`views/TableBillView.vue`** — Table bill page: lists all orders and items, shows grand total, payment method selection (CASH/CARD with card validation), calls `paySession`.
 - **`views/OrderTrackingView.vue`** — Vertical stepper showing order progress. Steps: PENDING→"Order Received", CONFIRMED→"Order Confirmed", PREPARING→"Being Prepared", READY→"Ready to Serve", DELIVERED→"Served". Active step has pulsing orange ring.
 - **`views/PaymentView.vue`** — Per-order payment page. CARD payment has full client-side validation: Luhn algorithm for card number, expiry format/future check, CVV length, cardholder name.
+
+### Responsive Design
+
+The frontend is fully responsive using Tailwind CSS breakpoints (`sm`/`lg`/`xl`). Key patterns:
+- **Admin sidebar** (`AdminLayout.vue`): hidden on mobile, toggled via hamburger button (`PhList`). Overlay closes it on tap.
+- **Tables** (admin orders, menu management): wrapped in `overflow-x-auto` with `min-w-[Npx]` so they scroll horizontally on mobile rather than breaking layout.
+- **Admin config forms**: `flex-col sm:flex-row` to stack vertically on mobile.
+- **Touch targets**: quantity buttons in `CartDrawer` are `w-9 h-9` (36px) for comfortable touch.
+
+### Dark Mode
+
+Dark mode uses `darkMode: 'media'` in `tailwind.config.js` — automatically activates when the OS/browser is set to dark mode. No manual toggle exists.
+
+- **Global base styles** in `src/assets/main.css`: `.card`, `.input`, `.label`, `.btn-secondary` all include `dark:` variants.
+- **Body**: `bg-gray-50 dark:bg-gray-900`, `text-gray-900 dark:text-gray-100`.
+- Color-coded banners (orange/red/green/blue) use `/20` or `/40` opacity tints in dark mode instead of solid light backgrounds (e.g. `dark:bg-orange-900/20`).
+- `OrderStatusBadge` colors are defined as complete class strings (including `dark:` variants) directly in the `configs` object so Tailwind's content scanner picks them up during build.
+
+### Search
+
+Client-side filtering (data already loaded in memory), reactive via `computed`:
+
+| View | Searches by |
+|---|---|
+| `HomeView.vue` | Menu item name or description; works alongside category filter |
+| `StaffDashboard.vue` | Order number, customer name, phone, table number |
+| `admin/OrdersView.vue` | Order number, customer name, phone, table number |
+| `admin/MenuManagement.vue` | Item name or description; works alongside category/availability filters |
+
+Each search input has a clear (✕) button and shows a contextual empty state message.
 
 ### Database
 
