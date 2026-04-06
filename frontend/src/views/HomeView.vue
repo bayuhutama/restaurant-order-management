@@ -86,20 +86,7 @@
       </div>
     </div>
 
-    <!-- Track Order -->
-    <div class="mt-12 p-6 bg-gray-800 text-white rounded-2xl text-center">
-      <h2 class="text-lg font-bold mb-2">Track Your Order</h2>
-      <p class="text-gray-400 text-sm mb-4">Enter your order number to see its status</p>
-      <div class="flex flex-col sm:flex-row gap-2 max-w-sm mx-auto">
-        <input
-          v-model="trackNumber"
-          placeholder="ORD-YYYYMMDD-XXXXXX"
-          class="input bg-gray-700 border-gray-600 text-white placeholder-gray-400 dark:bg-gray-700 dark:border-gray-600 flex-1"
-          @keyup.enter="goTrack"
-        />
-        <button @click="goTrack" class="btn-primary sm:flex-shrink-0">Track</button>
-      </div>
-    </div>
+
   </div>
 </template>
 
@@ -119,7 +106,6 @@ const categories = ref([])
 const menuItems = ref([])
 const selectedCategory = ref(null)
 const loading = ref(true)
-const trackNumber = ref('')
 const activeSession = ref(null)
 const searchQuery = ref('')
 
@@ -155,12 +141,6 @@ async function loadData() {
     console.error(e)
   } finally {
     loading.value = false
-  }
-}
-
-function goTrack() {
-  if (trackNumber.value.trim()) {
-    router.push(`/track/${trackNumber.value.trim()}`)
   }
 }
 
