@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Full-stack **dine-in** restaurant order management system (brand name: **Savoria**) with three roles: Guest/Customer (table-based ordering via QR code), Staff (real-time order dashboard), Admin (menu/category CRUD, order management).
 
-- **Backend**: Spring Boot 3.2.3 (Java 17), SQLite, JWT, WebSocket (STOMP)
+- **Backend**: Spring Boot 3.2.3 (Java 17), MySQL 8.0, JWT, WebSocket (STOMP)
 - **Frontend**: Vue 3, Vite, Tailwind CSS, Pinia, Vue Router, Axios, @stomp/stompjs
 
 This is a **dine-in only** restaurant system — no delivery, no takeaway. Customers sit at a table, scan a QR code, place orders, and food is brought to the table by staff.
@@ -96,9 +96,19 @@ Multiple customers at the same table can each place individual orders — they a
 
 ### Database
 
-SQLite file (`restaurant.db`) is created automatically in whichever directory the backend process runs from. `spring.jpa.hibernate.ddl-auto=update` handles schema creation.
+MySQL 8.0. `spring.jpa.hibernate.ddl-auto=update` handles schema creation automatically on startup.
 
-**SQLite limitation**: Cannot `ALTER TABLE ADD COLUMN` with a UNIQUE constraint. If a new UNIQUE column is added to an entity, delete `restaurant.db` and restart — the schema will be recreated. Non-unique columns can be added via `ddl-auto=update` without deleting the DB.
+**Connection defaults** (overridable via env vars):
+- `DB_URL` → `jdbc:mysql://localhost:3306/restaurant?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true`
+- `DB_USERNAME` → `root`
+- `DB_PASSWORD` → `admin`
+
+The `restaurant` database must be created manually before first run:
+```sql
+CREATE DATABASE restaurant CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+Use DBeaver or MySQL Workbench to inspect the database (host: localhost, port: 3306).
 
 ### Validation Summary
 
@@ -113,15 +123,15 @@ All request DTOs use Jakarta Bean Validation (`@Valid` on every controller metho
 | `MenuItemRequest` | name max 100; description max 1000; price 0.01–99999999.99; imageUrl max 500 |
 | `CategoryRequest` | name max 100; description max 500; imageUrl max 500 |
 
-Uploaded images are stored in an `uploads/` directory alongside `restaurant.db`. The directory is created automatically on first upload. Served at `/uploads/**` as static resources — no auth required so `<img>` tags load correctly from the frontend. `upload.dir` and `app.base-url` in `application.properties` control where files are stored and what URL prefix is returned.
+Uploaded images are stored in an `uploads/` directory. The directory is created automatically on first upload. Served at `/uploads/**` as static resources — no auth required so `<img>` tags load correctly from the frontend. `upload.dir` and `app.base-url` in `application.properties` control where files are stored and what URL prefix is returned.
 
-**To migrate to PostgreSQL**, change these three lines in `application.properties`:
+**To migrate to PostgreSQL**, change these lines in `application.properties` and `pom.xml`:
 ```properties
 spring.datasource.url=jdbc:postgresql://localhost:5432/restaurant
 spring.datasource.driver-class-name=org.postgresql.Driver
 spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
 ```
-Then add `postgresql` to `pom.xml` dependencies and remove `sqlite-jdbc` + `hibernate-community-dialects`.
+Then replace `mysql-connector-j` with `postgresql` in `pom.xml`.
 
 ### Default Seeded Accounts
 
@@ -132,7 +142,7 @@ Then add `postgresql` to `pom.xml` dependencies and remove `sqlite-jdbc` + `hibe
 
 Seeding only runs if the user does not already exist (checked via `existsByUsername`). Menu prices are in Indonesian Rupiah (IDR).
 
-If passwords were changed, delete `restaurant.db` and restart the backend to re-seed with the new passwords.
+If passwords were changed, delete all rows from the `users` table and restart the backend to re-seed with the new passwords.
 
 ### Password Policy (registration)
 

@@ -44,7 +44,11 @@
       "Bash(python3 -c \"import sys,json; vs=[v for v in json.load\\(sys.stdin\\) if v.startswith\\(''''6.''''\\)]; print\\(''''Vite 6.x versions \\(last 10\\):'''', vs[-10:]\\)\")",
       "Bash(xargs -0 --no-run-if-empty echo)",
       "Bash(git rm:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(mysql:*)",
+      "Bash(/c/Program Files/MySQL/MySQL Server 8.0/bin/mysql.exe:*)"
     ]
   }
 }
