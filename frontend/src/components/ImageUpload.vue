@@ -2,8 +2,8 @@
   <div class="space-y-2">
     <!-- Preview -->
     <div
-      class="relative w-full h-40 rounded-xl overflow-hidden border-2 border-dashed border-gray-300 bg-gray-50 flex items-center justify-center cursor-pointer hover:border-orange-400 hover:bg-orange-50 transition-colors"
-      :class="{ 'border-orange-500 bg-orange-50': isDragging }"
+      class="relative w-full h-40 rounded-xl overflow-hidden border-2 border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 flex items-center justify-center cursor-pointer hover:border-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
+      :class="{ 'border-orange-500 bg-orange-50 dark:bg-orange-900/20': isDragging }"
       @click="triggerPicker"
       @dragover.prevent="isDragging = true"
       @dragleave="isDragging = false"
@@ -19,7 +19,7 @@
 
       <div v-if="!modelValue || imgError" class="text-center p-4 z-10">
         <PhImage class="h-8 w-8 text-gray-400 mx-auto mb-1" />
-        <p class="text-sm font-medium text-gray-600">Click or drag & drop</p>
+        <p class="text-sm font-medium text-gray-600 dark:text-gray-300">Click or drag & drop</p>
         <p class="text-xs text-gray-400">JPG, PNG, GIF, WebP · max 10 MB</p>
       </div>
 

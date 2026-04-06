@@ -37,10 +37,10 @@
             <!-- Table number — locked if set via QR scan -->
             <div>
               <label class="label">Table Number <span class="text-red-500">*</span></label>
-              <div v-if="tableStore.tableNumber" class="flex items-center gap-3 px-4 py-3 bg-green-50 border border-green-300 rounded-lg">
+              <div v-if="tableStore.tableNumber" class="flex items-center gap-3 px-4 py-3 bg-green-50 dark:bg-green-900/20 border border-green-300 dark:border-green-700 rounded-lg">
                 <div class="flex-1">
-                  <p class="font-semibold text-green-900">Table {{ tableStore.tableNumber }}</p>
-                  <p class="text-xs text-green-600">Set from QR code scan</p>
+                  <p class="font-semibold text-green-900 dark:text-green-300">Table {{ tableStore.tableNumber }}</p>
+                  <p class="text-xs text-green-600 dark:text-green-400">Set from QR code scan</p>
                 </div>
                 <PhCheck class="h-5 w-5 text-green-500" />
               </div>

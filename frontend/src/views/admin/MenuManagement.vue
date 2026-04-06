@@ -20,19 +20,20 @@
 
     <div v-if="loading" class="text-center py-20 text-gray-400">Loading...</div>
 
-    <div v-else class="bg-white rounded-xl border overflow-hidden">
-      <table class="w-full text-sm">
-        <thead class="bg-gray-50 border-b">
+    <div v-else class="bg-white dark:bg-gray-800 rounded-xl border dark:border-gray-700 overflow-hidden">
+      <div class="overflow-x-auto">
+      <table class="w-full text-sm min-w-[600px]">
+        <thead class="bg-gray-50 dark:bg-gray-700/50 border-b dark:border-gray-700">
           <tr>
-            <th class="px-4 py-3 text-left font-medium text-gray-600">Item</th>
-            <th class="px-4 py-3 text-left font-medium text-gray-600">Category</th>
-            <th class="px-4 py-3 text-left font-medium text-gray-600">Price</th>
-            <th class="px-4 py-3 text-left font-medium text-gray-600">Status</th>
-            <th class="px-4 py-3 text-left font-medium text-gray-600">Actions</th>
+            <th class="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-300">Item</th>
+            <th class="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-300">Category</th>
+            <th class="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-300">Price</th>
+            <th class="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-300">Status</th>
+            <th class="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-300">Actions</th>
           </tr>
         </thead>
-        <tbody class="divide-y">
-          <tr v-for="item in displayedItems" :key="item.id" class="hover:bg-gray-50">
+        <tbody class="divide-y dark:divide-gray-700">
+          <tr v-for="item in displayedItems" :key="item.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
             <td class="px-4 py-3">
               <div class="flex items-center gap-3">
                 <img
@@ -47,12 +48,12 @@
                 </div>
               </div>
             </td>
-            <td class="px-4 py-3 text-gray-600">{{ item.category?.name || '—' }}</td>
+            <td class="px-4 py-3 text-gray-600 dark:text-gray-400">{{ item.category?.name || '—' }}</td>
             <td class="px-4 py-3 font-semibold text-orange-600">{{ formatRupiah(item.price) }}</td>
             <td class="px-4 py-3">
               <button
                 @click="toggleAvailability(item)"
-                :class="['text-xs px-2 py-1 rounded-full font-medium transition-colors', item.available ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200']"
+                :class="['text-xs px-2 py-1 rounded-full font-medium transition-colors', item.available ? 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/40 dark:text-green-300 dark:hover:bg-green-900/60' : 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/40 dark:text-red-300 dark:hover:bg-red-900/60']"
               >
                 {{ item.available ? 'Available' : 'Unavailable' }}
               </button>
@@ -69,12 +70,13 @@
           </tr>
         </tbody>
       </table>
+      </div>
     </div>
 
     <!-- Modal -->
     <Modal v-if="showModal" :title="editing ? 'Edit Menu Item' : 'Add Menu Item'" @close="showModal = false">
       <form @submit.prevent="save" class="space-y-4">
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div class="col-span-2">
             <label class="label">Name *</label>
             <input v-model="form.name" class="input" placeholder="Item name" required />

@@ -34,19 +34,19 @@
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
       <div class="card p-4 text-center">
         <p class="text-2xl font-bold text-yellow-600">{{ countByStatus('PENDING') }}</p>
-        <p class="text-xs text-gray-500 mt-1">Pending</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Pending</p>
       </div>
       <div class="card p-4 text-center">
         <p class="text-2xl font-bold text-purple-600">{{ countByStatus('PREPARING') }}</p>
-        <p class="text-xs text-gray-500 mt-1">Preparing</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Preparing</p>
       </div>
       <div class="card p-4 text-center">
         <p class="text-2xl font-bold text-green-600">{{ countByStatus('READY') }}</p>
-        <p class="text-xs text-gray-500 mt-1">Ready</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Ready</p>
       </div>
       <div class="card p-4 text-center">
-        <p class="text-2xl font-bold text-gray-600">{{ countByStatus('DELIVERED') }}</p>
-        <p class="text-xs text-gray-500 mt-1">Delivered Today</p>
+        <p class="text-2xl font-bold text-gray-600 dark:text-gray-400">{{ countByStatus('DELIVERED') }}</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Delivered Today</p>
       </div>
     </div>
 
@@ -68,25 +68,25 @@
         <div class="flex items-start justify-between mb-3">
           <div>
             <p class="font-mono text-sm font-bold">{{ order.orderNumber }}</p>
-            <p class="text-xs text-gray-400">{{ formatTime(order.createdAt) }}</p>
+            <p class="text-xs text-gray-400 dark:text-gray-500">{{ formatTime(order.createdAt) }}</p>
           </div>
           <OrderStatusBadge :status="order.status" />
         </div>
 
         <!-- Customer -->
-        <div class="text-sm text-gray-600 mb-3">
-          <p class="font-medium text-gray-800">{{ order.customerName || 'Guest' }}</p>
+        <div class="text-sm text-gray-600 dark:text-gray-400 mb-3">
+          <p class="font-medium text-gray-800 dark:text-gray-200">{{ order.customerName || 'Guest' }}</p>
           <p v-if="order.tableNumber" class="text-xs">Table {{ order.tableNumber }}</p>
           <p v-if="order.customerPhone" class="text-xs">{{ order.customerPhone }}</p>
         </div>
 
         <!-- Items -->
-        <div class="bg-gray-50 rounded-lg p-3 mb-3 space-y-1">
+        <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 mb-3 space-y-1">
           <div v-for="item in order.items" :key="item.id" class="text-xs flex justify-between">
             <span>{{ item.menuItemName }} × {{ item.quantity }}</span>
-            <span class="text-gray-500">{{ formatRupiah(item.subtotal) }}</span>
+            <span class="text-gray-500 dark:text-gray-400">{{ formatRupiah(item.subtotal) }}</span>
           </div>
-          <div class="border-t pt-1 flex justify-between font-semibold text-xs">
+          <div class="border-t dark:border-gray-600 pt-1 flex justify-between font-semibold text-xs">
             <span>Total</span>
             <span class="text-orange-600">{{ formatRupiah(order.totalAmount) }}</span>
           </div>
@@ -96,7 +96,7 @@
 
         <!-- Payment badge -->
         <div class="flex items-center gap-2 mb-4">
-          <span class="text-xs bg-gray-100 px-2 py-0.5 rounded-full">{{ order.payment?.method }}</span>
+          <span class="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">{{ order.payment?.method }}</span>
           <span
             class="text-xs px-2 py-0.5 rounded-full"
             :class="order.payment?.status === 'PAID' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'"

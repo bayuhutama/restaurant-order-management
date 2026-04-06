@@ -1,11 +1,11 @@
 <template>
   <!-- Overlay -->
   <div class="fixed inset-0 bg-black/50 z-50 flex justify-end" @click.self="$emit('close')">
-    <div class="bg-white w-full max-w-md h-full flex flex-col shadow-2xl">
+    <div class="bg-white dark:bg-gray-800 w-full max-w-md h-full flex flex-col shadow-2xl">
       <!-- Header -->
-      <div class="flex items-center justify-between p-4 border-b">
+      <div class="flex items-center justify-between p-4 border-b dark:border-gray-700">
         <h2 class="text-lg font-bold">Your Cart ({{ cart.itemCount }})</h2>
-        <button @click="$emit('close')" class="text-gray-400 hover:text-gray-600"><PhX class="h-5 w-5" /></button>
+        <button @click="$emit('close')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"><PhX class="h-5 w-5" /></button>
       </div>
 
       <!-- Items -->
@@ -17,7 +17,7 @@
         <div
           v-for="item in cart.items"
           :key="item.id"
-          class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"
+          class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
         >
           <img
             :src="item.imageUrl || '/placeholder.jpg'"
@@ -32,12 +32,12 @@
           <div class="flex items-center gap-1">
             <button
               @click="cart.updateQuantity(item.id, item.quantity - 1)"
-              class="w-7 h-7 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-sm font-bold"
+              class="w-9 h-9 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-sm font-bold"
             >−</button>
-            <span class="w-6 text-center text-sm font-medium">{{ item.quantity }}</span>
+            <span class="w-7 text-center text-sm font-medium">{{ item.quantity }}</span>
             <button
               @click="cart.updateQuantity(item.id, item.quantity + 1)"
-              class="w-7 h-7 rounded-full bg-orange-100 hover:bg-orange-200 text-orange-700 flex items-center justify-center text-sm font-bold"
+              class="w-9 h-9 rounded-full bg-orange-100 hover:bg-orange-200 text-orange-700 flex items-center justify-center text-sm font-bold"
             >+</button>
           </div>
           <button
@@ -50,7 +50,7 @@
       </div>
 
       <!-- Footer -->
-      <div class="border-t p-4 space-y-3">
+      <div class="border-t dark:border-gray-700 p-4 space-y-3">
         <div class="flex justify-between text-lg font-bold">
           <span>Total</span>
           <span class="text-orange-600">{{ formatRupiah(cart.total) }}</span>

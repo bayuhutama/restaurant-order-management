@@ -19,7 +19,7 @@
           />
           <div class="flex-1 min-w-0">
             <h3 class="font-semibold">{{ cat.name }}</h3>
-            <p class="text-sm text-gray-500 truncate">{{ cat.description || 'No description' }}</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 truncate">{{ cat.description || 'No description' }}</p>
           </div>
         </div>
         <div class="flex gap-2 mt-3">

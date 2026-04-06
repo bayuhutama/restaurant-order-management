@@ -10,16 +10,16 @@
   <div class="max-w-7xl mx-auto px-4 py-8">
     <!-- Hero -->
     <div class="text-center mb-10">
-      <h1 class="text-4xl font-bold text-gray-900 mb-2">Our Menu</h1>
-      <p class="text-gray-500">Fresh ingredients, amazing flavors</p>
+      <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">Our Menu</h1>
+      <p class="text-gray-500 dark:text-gray-400">Fresh ingredients, amazing flavors</p>
     </div>
 
     <!-- Running bill banner -->
     <div
       v-if="tableStore.tableNumber && activeSession && activeSession.orderCount > 0"
-      class="bg-orange-50 border border-orange-200 rounded-xl p-4 mb-6 flex items-center justify-between"
+      class="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl p-4 mb-6 flex items-center justify-between"
     >
-      <span class="text-sm text-gray-700 font-medium">
+      <span class="text-sm text-gray-700 dark:text-gray-300 font-medium">
         Table {{ tableStore.tableNumber }} has a running bill &middot; {{ formatRupiah(activeSession.totalAmount) }}
       </span>
       <RouterLink
@@ -72,14 +72,14 @@
     <div class="mt-12 p-6 bg-gray-800 text-white rounded-2xl text-center">
       <h2 class="text-lg font-bold mb-2">Track Your Order</h2>
       <p class="text-gray-400 text-sm mb-4">Enter your order number to see its status</p>
-      <div class="flex gap-2 max-w-sm mx-auto">
+      <div class="flex flex-col sm:flex-row gap-2 max-w-sm mx-auto">
         <input
           v-model="trackNumber"
           placeholder="ORD-YYYYMMDD-XXXXXX"
-          class="input bg-gray-700 border-gray-600 text-white placeholder-gray-400 flex-1"
+          class="input bg-gray-700 border-gray-600 text-white placeholder-gray-400 dark:bg-gray-700 dark:border-gray-600 flex-1"
           @keyup.enter="goTrack"
         />
-        <button @click="goTrack" class="btn-primary">Track</button>
+        <button @click="goTrack" class="btn-primary sm:flex-shrink-0">Track</button>
       </div>
     </div>
   </div>

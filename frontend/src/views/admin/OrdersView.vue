@@ -7,23 +7,23 @@
 
     <div v-if="loading" class="text-center py-20 text-gray-400">Loading...</div>
 
-    <div v-else class="bg-white rounded-xl border overflow-hidden">
+    <div v-else class="bg-white dark:bg-gray-800 rounded-xl border dark:border-gray-700 overflow-hidden">
       <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead class="bg-gray-50 border-b">
+        <table class="w-full text-sm min-w-[700px]">
+          <thead class="bg-gray-50 dark:bg-gray-700/50 border-b dark:border-gray-700">
             <tr>
-              <th class="px-4 py-3 text-left font-medium text-gray-600">Order #</th>
-              <th class="px-4 py-3 text-left font-medium text-gray-600">Customer</th>
-              <th class="px-4 py-3 text-left font-medium text-gray-600">Items</th>
-              <th class="px-4 py-3 text-left font-medium text-gray-600">Total</th>
-              <th class="px-4 py-3 text-left font-medium text-gray-600">Payment</th>
-              <th class="px-4 py-3 text-left font-medium text-gray-600">Status</th>
-              <th class="px-4 py-3 text-left font-medium text-gray-600">Date</th>
-              <th class="px-4 py-3 text-left font-medium text-gray-600">Actions</th>
+              <th class="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-300">Order #</th>
+              <th class="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-300">Customer</th>
+              <th class="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-300">Items</th>
+              <th class="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-300">Total</th>
+              <th class="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-300">Payment</th>
+              <th class="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-300">Status</th>
+              <th class="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-300">Date</th>
+              <th class="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-300">Actions</th>
             </tr>
           </thead>
-          <tbody class="divide-y">
-            <tr v-for="order in orders" :key="order.id" class="hover:bg-gray-50">
+          <tbody class="divide-y dark:divide-gray-700">
+            <tr v-for="order in orders" :key="order.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
               <td class="px-4 py-3 font-mono text-xs">{{ order.orderNumber }}</td>
               <td class="px-4 py-3">
                 <p class="font-medium">{{ order.customerName || 'Guest' }}</p>
@@ -35,7 +35,7 @@
               <td class="px-4 py-3 font-semibold text-orange-600">{{ formatRupiah(order.totalAmount) }}</td>
               <td class="px-4 py-3">
                 <div class="text-xs space-y-1">
-                  <span class="bg-gray-100 px-2 py-0.5 rounded-full">{{ order.payment?.method }}</span>
+                  <span class="bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">{{ order.payment?.method }}</span>
                   <br/>
                   <span :class="order.payment?.status === 'PAID' ? 'text-green-600' : 'text-yellow-600'">
                     {{ order.payment?.status }}
@@ -49,7 +49,7 @@
                   v-if="order.status !== 'DELIVERED' && order.status !== 'CANCELLED'"
                   :value="order.status"
                   @change="updateStatus(order.id, $event.target.value)"
-                  class="text-xs border rounded px-2 py-1"
+                  class="text-xs border dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-700 dark:text-gray-200"
                 >
                   <option value="PENDING">PENDING</option>
                   <option value="CONFIRMED">CONFIRMED</option>

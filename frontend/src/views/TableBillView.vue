@@ -15,20 +15,20 @@
       <div class="flex justify-center mb-4">
         <PhClipboardText class="h-16 w-16 text-gray-300" />
       </div>
-      <h2 class="text-xl font-semibold text-gray-700 mb-2">No active bill for this table.</h2>
-      <p class="text-gray-400 text-sm mb-6">Place an order first to start a table session.</p>
+      <h2 class="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">No active bill for this table.</h2>
+      <p class="text-gray-400 dark:text-gray-500 text-sm mb-6">Place an order first to start a table session.</p>
       <RouterLink to="/" class="btn-primary">Browse Menu</RouterLink>
     </div>
 
     <!-- Payment success -->
     <div v-else-if="paid" class="text-center py-20">
       <div class="flex justify-center mb-4">
-        <div class="h-20 w-20 rounded-full bg-green-100 flex items-center justify-center">
+        <div class="h-20 w-20 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
           <PhCheck class="h-10 w-10 text-green-500" />
         </div>
       </div>
-      <h2 class="text-2xl font-bold text-gray-900 mb-2">Payment complete!</h2>
-      <p class="text-gray-500">Thank you for dining with us.</p>
+      <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Payment complete!</h2>
+      <p class="text-gray-500 dark:text-gray-400">Thank you for dining with us.</p>
       <RouterLink to="/" class="mt-6 inline-block btn-primary">Back to Menu</RouterLink>
     </div>
 
@@ -53,37 +53,37 @@
         >
           <div class="flex items-center justify-between mb-3">
             <div>
-              <span class="font-semibold text-sm text-gray-800">Order #{{ idx + 1 }}</span>
+              <span class="font-semibold text-sm text-gray-800 dark:text-gray-200">Order #{{ idx + 1 }}</span>
               <span class="ml-2 text-xs text-gray-400">{{ order.orderNumber }}</span>
             </div>
             <span class="text-xs font-medium px-2 py-0.5 rounded-full"
               :class="{
-                'bg-yellow-100 text-yellow-700': order.status === 'PENDING',
-                'bg-blue-100 text-blue-700': order.status === 'CONFIRMED' || order.status === 'PREPARING',
-                'bg-purple-100 text-purple-700': order.status === 'READY',
-                'bg-green-100 text-green-700': order.status === 'DELIVERED',
+                'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300': order.status === 'PENDING',
+                'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300': order.status === 'CONFIRMED' || order.status === 'PREPARING',
+                'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300': order.status === 'READY',
+                'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300': order.status === 'DELIVERED',
               }"
             >{{ order.status }}</span>
           </div>
 
           <div class="space-y-1.5">
             <div v-for="item in order.items" :key="item.id" class="flex justify-between text-sm">
-              <span class="text-gray-600">{{ item.menuItemName }} &times; {{ item.quantity }}</span>
-              <span class="text-gray-800 font-medium">{{ formatRupiah(item.subtotal) }}</span>
+              <span class="text-gray-600 dark:text-gray-400">{{ item.menuItemName }} &times; {{ item.quantity }}</span>
+              <span class="text-gray-800 dark:text-gray-200 font-medium">{{ formatRupiah(item.subtotal) }}</span>
             </div>
           </div>
 
-          <div class="border-t mt-3 pt-3 flex justify-between text-sm font-semibold">
-            <span class="text-gray-600">Subtotal</span>
-            <span class="text-gray-900">{{ formatRupiah(order.totalAmount) }}</span>
+          <div class="border-t dark:border-gray-700 mt-3 pt-3 flex justify-between text-sm font-semibold">
+            <span class="text-gray-600 dark:text-gray-400">Subtotal</span>
+            <span class="text-gray-900 dark:text-gray-100">{{ formatRupiah(order.totalAmount) }}</span>
           </div>
         </div>
       </div>
 
       <!-- Grand total -->
-      <div class="card p-4 mb-6 bg-orange-50 border border-orange-200">
+      <div class="card p-4 mb-6 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800">
         <div class="flex justify-between items-center">
-          <span class="text-lg font-bold text-gray-900">Grand Total</span>
+          <span class="text-lg font-bold text-gray-900 dark:text-gray-100">Grand Total</span>
           <span class="text-2xl font-bold text-orange-600">{{ formatRupiah(session.totalAmount) }}</span>
         </div>
       </div>
@@ -95,25 +95,25 @@
           <!-- Cash -->
           <button
             @click="paymentMethod = 'CASH'"
-            :class="['p-4 rounded-xl border-2 text-center transition-all', paymentMethod === 'CASH' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-gray-300']"
+            :class="['p-4 rounded-xl border-2 text-center transition-all', paymentMethod === 'CASH' ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20' : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500']"
           >
             <div class="flex justify-center mb-1">
-              <PhMoney class="h-7 w-7 text-gray-600" />
+              <PhMoney class="h-7 w-7 text-gray-600 dark:text-gray-400" />
             </div>
             <div class="font-medium">Cash</div>
-            <div class="text-xs text-gray-500">Pay at counter</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400">Pay at counter</div>
           </button>
 
           <!-- Card -->
           <button
             @click="paymentMethod = 'CARD'"
-            :class="['p-4 rounded-xl border-2 text-center transition-all', paymentMethod === 'CARD' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-gray-300']"
+            :class="['p-4 rounded-xl border-2 text-center transition-all', paymentMethod === 'CARD' ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20' : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500']"
           >
             <div class="flex justify-center mb-1">
-              <PhCreditCard class="h-7 w-7 text-gray-600" />
+              <PhCreditCard class="h-7 w-7 text-gray-600 dark:text-gray-400" />
             </div>
             <div class="font-medium">Card</div>
-            <div class="text-xs text-gray-500">Pay now (simulated)</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400">Pay now (simulated)</div>
           </button>
         </div>
 

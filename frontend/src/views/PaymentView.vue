@@ -48,7 +48,7 @@
               <p class="text-sm font-semibold">{{ formatRupiah(item.subtotal) }}</p>
             </div>
           </div>
-          <div class="border-t pt-3 flex justify-between font-bold text-lg">
+          <div class="border-t dark:border-gray-700 pt-3 flex justify-between font-bold text-lg">
             <span>Total</span>
             <span class="text-orange-600">{{ formatRupiah(order.totalAmount) }}</span>
           </div>
@@ -60,11 +60,11 @@
 
           <!-- CARD -->
           <div v-if="order.payment?.method === 'CARD'" class="space-y-4">
-            <div class="flex items-center gap-3 p-4 bg-blue-50 rounded-xl border border-blue-200">
+            <div class="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-700">
               <PhCreditCard class="h-7 w-7 text-blue-500 flex-shrink-0" />
               <div>
-                <p class="font-medium text-blue-900">Card Payment</p>
-                <p class="text-sm text-blue-600">Your card will be charged {{ formatRupiah(order.totalAmount) }}</p>
+                <p class="font-medium text-blue-900 dark:text-blue-300">Card Payment</p>
+                <p class="text-sm text-blue-600 dark:text-blue-400">Your card will be charged {{ formatRupiah(order.totalAmount) }}</p>
               </div>
             </div>
 
@@ -127,11 +127,11 @@
           </div>
 
           <!-- CASH -->
-          <div v-else class="flex items-center gap-3 p-4 bg-green-50 rounded-xl border border-green-200">
+          <div v-else class="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-700">
             <PhMoney class="h-7 w-7 text-green-500 flex-shrink-0" />
             <div>
-              <p class="font-medium text-green-900">Cash Payment</p>
-              <p class="text-sm text-green-600">Our staff will collect {{ formatRupiah(order.totalAmount) }} at your table when the order is served.</p>
+              <p class="font-medium text-green-900 dark:text-green-300">Cash Payment</p>
+              <p class="text-sm text-green-600 dark:text-green-400">Our staff will collect {{ formatRupiah(order.totalAmount) }} at your table when the order is served.</p>
             </div>
           </div>
         </div>

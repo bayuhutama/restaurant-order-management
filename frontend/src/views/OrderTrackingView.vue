@@ -13,18 +13,18 @@
     <div v-else-if="order" class="space-y-5">
 
       <!-- Awaiting payment banner -->
-      <div v-if="order.status === 'AWAITING_PAYMENT'" class="card p-5 border-l-4 border-orange-500 bg-orange-50">
-        <p class="font-semibold text-orange-900 mb-1">Payment Required</p>
-        <p class="text-sm text-orange-700 mb-3">Your order is waiting for payment before it is sent to the kitchen.</p>
+      <div v-if="order.status === 'AWAITING_PAYMENT'" class="card p-5 border-l-4 border-orange-500 bg-orange-50 dark:bg-orange-900/20">
+        <p class="font-semibold text-orange-900 dark:text-orange-300 mb-1">Payment Required</p>
+        <p class="text-sm text-orange-700 dark:text-orange-400 mb-3">Your order is waiting for payment before it is sent to the kitchen.</p>
         <RouterLink :to="`/payment/${order.orderNumber}`" class="btn-primary block text-center py-2.5">
           Complete Payment — {{ formatRupiah(order.totalAmount) }}
         </RouterLink>
       </div>
 
       <!-- Cancelled banner -->
-      <div v-if="order.status === 'CANCELLED'" class="card p-5 border-l-4 border-red-500 bg-red-50">
-        <p class="font-semibold text-red-900 mb-1">Order Cancelled</p>
-        <p class="text-sm text-red-700">This order has been cancelled.</p>
+      <div v-if="order.status === 'CANCELLED'" class="card p-5 border-l-4 border-red-500 bg-red-50 dark:bg-red-900/20">
+        <p class="font-semibold text-red-900 dark:text-red-300 mb-1">Order Cancelled</p>
+        <p class="text-sm text-red-700 dark:text-red-400">This order has been cancelled.</p>
       </div>
 
       <!-- Order header -->
@@ -47,7 +47,7 @@
         <h2 class="font-semibold mb-5">Order Progress</h2>
         <div class="relative">
           <!-- Vertical connector line -->
-          <div class="absolute left-4 top-4 bottom-4 w-0.5 bg-gray-200"></div>
+          <div class="absolute left-4 top-4 bottom-4 w-0.5 bg-gray-200 dark:bg-gray-600"></div>
 
           <div class="space-y-0">
             <div v-for="(step, index) in steps" :key="step.status" class="relative flex gap-4 pb-6 last:pb-0">
@@ -62,18 +62,18 @@
                   <span class="w-2.5 h-2.5 bg-white rounded-full animate-pulse"></span>
                 </div>
                 <!-- Upcoming -->
-                <div v-else class="w-8 h-8 rounded-full bg-gray-100 border-2 border-gray-200 flex items-center justify-center">
-                  <span class="w-2 h-2 bg-gray-300 rounded-full"></span>
+                <div v-else class="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 flex items-center justify-center">
+                  <span class="w-2 h-2 bg-gray-300 dark:bg-gray-500 rounded-full"></span>
                 </div>
               </div>
 
               <!-- Step content -->
               <div class="flex-1 pt-1">
-                <p :class="['text-sm font-semibold', isActive(step.status) ? 'text-orange-600' : isCompleted(step.status) ? 'text-gray-800' : 'text-gray-400']">
+                <p :class="['text-sm font-semibold', isActive(step.status) ? 'text-orange-600' : isCompleted(step.status) ? 'text-gray-800 dark:text-gray-200' : 'text-gray-400 dark:text-gray-500']">
                   {{ step.label }}
-                  <span v-if="isActive(step.status)" class="ml-2 text-xs font-normal bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full">In progress</span>
+                  <span v-if="isActive(step.status)" class="ml-2 text-xs font-normal bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-300 px-2 py-0.5 rounded-full">In progress</span>
                 </p>
-                <p :class="['text-xs mt-0.5', isActive(step.status) ? 'text-orange-500' : isCompleted(step.status) ? 'text-gray-500' : 'text-gray-300']">
+                <p :class="['text-xs mt-0.5', isActive(step.status) ? 'text-orange-500' : isCompleted(step.status) ? 'text-gray-500 dark:text-gray-400' : 'text-gray-300 dark:text-gray-600']">
                   {{ step.description }}
                 </p>
               </div>
@@ -85,7 +85,7 @@
       <!-- Customer info -->
       <div class="card p-5">
         <h2 class="font-semibold mb-3">Customer Details</h2>
-        <div class="text-sm text-gray-700 space-y-1.5">
+        <div class="text-sm text-gray-700 dark:text-gray-300 space-y-1.5">
           <div class="flex gap-2">
             <span class="text-gray-400 w-16 shrink-0">Name</span>
             <span>{{ order.customerName || '—' }}</span>
@@ -123,7 +123,7 @@
             <p class="text-sm font-semibold">{{ formatRupiah(item.subtotal) }}</p>
           </div>
         </div>
-        <div class="border-t mt-4 pt-4 flex justify-between font-bold">
+        <div class="border-t dark:border-gray-700 mt-4 pt-4 flex justify-between font-bold">
           <span>Total</span>
           <span class="text-orange-600">{{ formatRupiah(order.totalAmount) }}</span>
         </div>

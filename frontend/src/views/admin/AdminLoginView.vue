@@ -26,18 +26,18 @@
     </div>
 
     <!-- Right form panel -->
-    <div class="w-full lg:w-1/2 flex items-center justify-center px-8 py-12 bg-white">
+    <div class="w-full lg:w-1/2 flex items-center justify-center px-5 py-10 sm:px-8 sm:py-12 bg-white dark:bg-gray-900">
       <div class="w-full max-w-sm">
         <!-- Mobile logo -->
         <div class="lg:hidden flex items-center gap-2 mb-10">
           <div class="w-7 h-7 bg-orange-500 rounded-lg flex items-center justify-center">
             <PhForkKnife class="w-4 h-4 text-white" weight="bold" />
           </div>
-          <span class="text-gray-900 text-lg font-semibold">Savoria</span>
+          <span class="text-gray-900 dark:text-gray-100 text-lg font-semibold">Savoria</span>
         </div>
 
-        <h1 class="text-2xl font-bold text-gray-900 mb-1">Admin Portal</h1>
-        <p class="text-gray-500 text-sm mb-8">Restricted access — administrators only.</p>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1">Admin Portal</h1>
+        <p class="text-gray-500 dark:text-gray-400 text-sm mb-8">Restricted access — administrators only.</p>
 
         <form @submit.prevent="handleLogin" class="space-y-5">
           <div>

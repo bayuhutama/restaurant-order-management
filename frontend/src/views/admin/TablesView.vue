@@ -3,22 +3,22 @@
     <div class="flex items-center justify-between mb-6">
       <div>
         <h1 class="text-xl font-bold">Table QR Codes</h1>
-        <p class="text-sm text-gray-500 mt-1">Print and place these at each table so customers can scan to order.</p>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Print and place these at each table so customers can scan to order.</p>
       </div>
       <button @click="printAll" class="btn-secondary btn-sm">Print All</button>
     </div>
 
     <!-- Config -->
-    <div class="card p-5 mb-6 flex items-end gap-4">
+    <div class="card p-5 mb-6 flex flex-col sm:flex-row sm:items-end gap-4">
       <div>
         <label class="label">Number of Tables</label>
-        <input v-model.number="tableCount" type="number" min="1" max="100" class="input w-32" />
+        <input v-model.number="tableCount" type="number" min="1" max="100" class="input w-full sm:w-32" />
       </div>
-      <div>
+      <div class="flex-1">
         <label class="label">Base URL</label>
-        <input v-model="baseUrl" class="input w-72" placeholder="http://localhost:5173" />
+        <input v-model="baseUrl" class="input w-full" placeholder="http://localhost:5173" />
       </div>
-      <button @click="generateAll" :disabled="generating" class="btn-primary">
+      <button @click="generateAll" :disabled="generating" class="btn-primary w-full sm:w-auto">
         {{ generating ? 'Generating...' : 'Generate QR Codes' }}
       </button>
     </div>
@@ -33,7 +33,7 @@
         <img :src="qr.dataUrl" :alt="`Table ${qr.table}`" class="w-40 h-40" />
         <div class="text-center">
           <p class="font-bold text-lg">Table {{ qr.table }}</p>
-          <p class="text-xs text-gray-400 break-all">{{ qr.url }}</p>
+          <p class="text-xs text-gray-400 dark:text-gray-500 break-all">{{ qr.url }}</p>
         </div>
       </div>
     </div>
