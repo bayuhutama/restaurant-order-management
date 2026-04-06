@@ -202,6 +202,14 @@ public class OrderService {
                     "Cannot transition order from " + order.getStatus() + " to " + newStatus);
         }
 
+        // Require payment before staff can confirm an order
+        if (order.getStatus() == OrderStatus.PENDING && newStatus == OrderStatus.CONFIRMED) {
+            Payment payment = order.getPayment();
+            if (payment == null || payment.getStatus() != PaymentStatus.PAID) {
+                throw new RuntimeException("Cannot confirm order: payment has not been received");
+            }
+        }
+
         order.setStatus(newStatus);
 
         // Auto-mark cash payment as paid when delivered

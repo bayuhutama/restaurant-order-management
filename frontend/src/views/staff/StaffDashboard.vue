@@ -117,16 +117,22 @@
         </div>
 
         <!-- Status Actions -->
-        <div v-if="order.status !== 'DELIVERED' && order.status !== 'CANCELLED'" class="flex flex-wrap gap-2">
-          <button
-            v-for="action in nextActions(order.status)"
-            :key="action.status"
-            @click="updateStatus(order.id, action.status)"
-            :class="['btn btn-sm text-xs', action.class]"
-            :disabled="updating === order.id"
-          >
-            {{ action.label }}
-          </button>
+        <div v-if="order.status !== 'DELIVERED' && order.status !== 'CANCELLED'">
+          <div v-if="order.status === 'PENDING' && order.payment?.status !== 'PAID'" class="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg px-3 py-2">
+            <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse flex-shrink-0"></span>
+            Awaiting payment
+          </div>
+          <div v-else class="flex flex-wrap gap-2">
+            <button
+              v-for="action in nextActions(order.status)"
+              :key="action.status"
+              @click="updateStatus(order.id, action.status)"
+              :class="['btn btn-sm text-xs', action.class]"
+              :disabled="updating === order.id"
+            >
+              {{ action.label }}
+            </button>
+          </div>
         </div>
       </div>
     </div>
