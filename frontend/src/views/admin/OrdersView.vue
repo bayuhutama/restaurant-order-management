@@ -1,8 +1,22 @@
 <template>
   <div class="p-6">
-    <div class="flex items-center justify-between mb-6">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
       <h1 class="text-xl font-bold">All Orders</h1>
-      <button @click="load" class="btn-secondary btn-sm inline-flex items-center gap-1"><PhArrowCounterClockwise class="h-4 w-4" />Refresh</button>
+      <div class="flex gap-2">
+        <div class="relative">
+          <PhMagnifyingGlass class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="Search orders..."
+            class="input pl-9 text-sm w-full sm:w-56 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-500"
+          />
+          <button v-if="searchQuery" @click="searchQuery = ''" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+            <PhX class="h-3.5 w-3.5" />
+          </button>
+        </div>
+        <button @click="load" class="btn-secondary btn-sm inline-flex items-center gap-1"><PhArrowCounterClockwise class="h-4 w-4" />Refresh</button>
+      </div>
     </div>
 
     <div v-if="loading" class="text-center py-20 text-gray-400">Loading...</div>
@@ -23,7 +37,7 @@
             </tr>
           </thead>
           <tbody class="divide-y dark:divide-gray-700">
-            <tr v-for="order in orders" :key="order.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+            <tr v-for="order in filteredOrders" :key="order.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
               <td class="px-4 py-3 font-mono text-xs">{{ order.orderNumber }}</td>
               <td class="px-4 py-3">
                 <p class="font-medium">{{ order.customerName || 'Guest' }}</p>
@@ -61,8 +75,10 @@
                 <span v-else class="text-xs text-gray-400">—</span>
               </td>
             </tr>
-            <tr v-if="orders.length === 0">
-              <td colspan="8" class="px-4 py-8 text-center text-gray-400">No orders found</td>
+            <tr v-if="filteredOrders.length === 0">
+              <td colspan="8" class="px-4 py-8 text-center text-gray-400">
+                {{ searchQuery ? 'No orders match your search' : 'No orders found' }}
+              </td>
             </tr>
           </tbody>
         </table>
@@ -72,14 +88,26 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { adminOrderApi } from '@/api'
 import { formatRupiah } from '@/utils/format'
 import OrderStatusBadge from '@/components/OrderStatusBadge.vue'
-import { PhArrowCounterClockwise } from '@phosphor-icons/vue'
+import { PhArrowCounterClockwise, PhMagnifyingGlass, PhX } from '@phosphor-icons/vue'
 
 const orders = ref([])
 const loading = ref(true)
+const searchQuery = ref('')
+
+const filteredOrders = computed(() => {
+  if (!searchQuery.value.trim()) return orders.value
+  const q = searchQuery.value.trim().toLowerCase()
+  return orders.value.filter(o =>
+    o.orderNumber.toLowerCase().includes(q) ||
+    (o.customerName && o.customerName.toLowerCase().includes(q)) ||
+    (o.customerPhone && o.customerPhone.includes(q)) ||
+    (o.tableNumber && o.tableNumber.toString().includes(q))
+  )
+})
 
 async function load() {
   loading.value = true

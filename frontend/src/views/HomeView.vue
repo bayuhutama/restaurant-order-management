@@ -28,6 +28,24 @@
       >View Bill <PhArrowRight class="h-4 w-4" /></RouterLink>
     </div>
 
+    <!-- Search -->
+    <div class="relative mb-4">
+      <PhMagnifyingGlass class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+      <input
+        v-model="searchQuery"
+        type="text"
+        placeholder="Search menu items..."
+        class="input pl-9 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-500"
+      />
+      <button
+        v-if="searchQuery"
+        @click="searchQuery = ''"
+        class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+      >
+        <PhX class="h-4 w-4" />
+      </button>
+    </div>
+
     <!-- Category Filter -->
     <div class="flex gap-2 overflow-x-auto py-1 px-1 mb-8 scrollbar-hide">
       <button
@@ -61,7 +79,7 @@
     <!-- Menu Grid -->
     <div v-else>
       <div v-if="filteredItems.length === 0" class="text-center py-20 text-gray-400">
-        <p>No items available in this category</p>
+        <p>{{ searchQuery ? 'No items match your search' : 'No items available in this category' }}</p>
       </div>
       <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 items-stretch">
         <MenuCard v-for="item in filteredItems" :key="item.id" :item="item" />
@@ -92,7 +110,7 @@ import { menuApi, tableSessionApi } from '@/api'
 import { useTableStore } from '@/stores/table'
 import { formatRupiah } from '@/utils/format'
 import MenuCard from '@/components/MenuCard.vue'
-import { PhArrowRight } from '@phosphor-icons/vue'
+import { PhArrowRight, PhMagnifyingGlass, PhX } from '@phosphor-icons/vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -103,11 +121,19 @@ const selectedCategory = ref(null)
 const loading = ref(true)
 const trackNumber = ref('')
 const activeSession = ref(null)
+const searchQuery = ref('')
 
 const filteredItems = computed(() => {
   let items = menuItems.value.filter(i => i.available)
   if (selectedCategory.value) {
     items = items.filter(i => i.category?.id === selectedCategory.value)
+  }
+  if (searchQuery.value.trim()) {
+    const q = searchQuery.value.trim().toLowerCase()
+    items = items.filter(i =>
+      i.name.toLowerCase().includes(q) ||
+      (i.description && i.description.toLowerCase().includes(q))
+    )
   }
   return items
 })

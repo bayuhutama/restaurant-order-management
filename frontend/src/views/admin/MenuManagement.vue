@@ -7,11 +7,23 @@
 
     <!-- Filters -->
     <div class="flex gap-3 mb-6 flex-wrap">
-      <select v-model="filterCategory" class="input w-auto" @change="filterItems">
+      <div class="relative flex-1 min-w-[180px]">
+        <PhMagnifyingGlass class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+        <input
+          v-model="searchQuery"
+          type="text"
+          placeholder="Search items..."
+          class="input pl-9 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-500"
+        />
+        <button v-if="searchQuery" @click="searchQuery = ''" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+          <PhX class="h-3.5 w-3.5" />
+        </button>
+      </div>
+      <select v-model="filterCategory" class="input w-auto dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100">
         <option value="">All Categories</option>
         <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
       </select>
-      <select v-model="filterAvailable" class="input w-auto" @change="filterItems">
+      <select v-model="filterAvailable" class="input w-auto dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100">
         <option value="">All Status</option>
         <option value="true">Available</option>
         <option value="false">Unavailable</option>
@@ -66,7 +78,9 @@
             </td>
           </tr>
           <tr v-if="displayedItems.length === 0">
-            <td colspan="5" class="px-4 py-8 text-center text-gray-400">No items found</td>
+            <td colspan="5" class="px-4 py-8 text-center text-gray-400">
+              {{ searchQuery ? 'No items match your search' : 'No items found' }}
+            </td>
           </tr>
         </tbody>
       </table>
@@ -125,6 +139,7 @@ import { menuApi, adminMenuApi } from '@/api'
 import { formatRupiah } from '@/utils/format'
 import Modal from '@/components/Modal.vue'
 import ImageUpload from '@/components/ImageUpload.vue'
+import { PhMagnifyingGlass, PhX } from '@phosphor-icons/vue'
 
 const menuItems = ref([])
 const categories = ref([])
@@ -137,12 +152,17 @@ const filterCategory = ref('')
 const filterAvailable = ref('')
 
 const form = ref({ name: '', description: '', price: '', imageUrl: '', categoryId: null, available: true })
+const searchQuery = ref('')
 
 const displayedItems = computed(() => {
   return menuItems.value.filter(item => {
     if (filterCategory.value && item.category?.id !== Number(filterCategory.value)) return false
     if (filterAvailable.value === 'true' && !item.available) return false
     if (filterAvailable.value === 'false' && item.available) return false
+    if (searchQuery.value.trim()) {
+      const q = searchQuery.value.trim().toLowerCase()
+      if (!item.name.toLowerCase().includes(q) && !(item.description && item.description.toLowerCase().includes(q))) return false
+    }
     return true
   })
 })
@@ -158,7 +178,6 @@ async function load() {
   }
 }
 
-function filterItems() { /* computed handles filtering */ }
 
 function openCreate() {
   editing.value = null

@@ -18,11 +18,22 @@
   </header>
 
   <div class="max-w-7xl mx-auto px-4 py-8">
-    <div class="flex items-center justify-between mb-6">
-      <div>
-        <h1 class="text-2xl font-bold">Orders</h1>
-      </div>
-      <div class="flex gap-2">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+      <h1 class="text-2xl font-bold">Orders</h1>
+      <div class="flex flex-col sm:flex-row gap-2">
+        <!-- Search -->
+        <div class="relative">
+          <PhMagnifyingGlass class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="Search orders..."
+            class="input pl-9 text-sm w-full sm:w-52 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-500"
+          />
+          <button v-if="searchQuery" @click="searchQuery = ''" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+            <PhX class="h-3.5 w-3.5" />
+          </button>
+        </div>
         <button @click="activeOnly = !activeOnly; loadOrders()" :class="activeOnly ? 'btn-primary btn-sm' : 'btn-secondary btn-sm'">
           {{ activeOnly ? 'Active Only' : 'All Orders' }}
         </button>
@@ -52,14 +63,14 @@
 
     <div v-if="loading" class="text-center py-20 text-gray-400">Loading orders...</div>
 
-    <div v-else-if="orders.length === 0" class="text-center py-20 text-gray-400">
-      <p>No orders to show</p>
+    <div v-else-if="filteredOrders.length === 0" class="text-center py-20 text-gray-400">
+      <p>{{ searchQuery ? 'No orders match your search' : 'No orders to show' }}</p>
     </div>
 
     <!-- Orders Grid -->
     <div v-else class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
       <div
-        v-for="order in orders"
+        v-for="order in filteredOrders"
         :key="order.id"
         class="card p-5 border-l-4"
         :class="borderClass(order.status)"
@@ -123,14 +134,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { staffApi } from '@/api'
 import { formatRupiah } from '@/utils/format'
 import { useAuthStore } from '@/stores/auth'
 import { useWebSocket } from '@/composables/useWebSocket'
 import OrderStatusBadge from '@/components/OrderStatusBadge.vue'
-import { PhForkKnife } from '@phosphor-icons/vue'
+import { PhForkKnife, PhMagnifyingGlass, PhX } from '@phosphor-icons/vue'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -145,6 +156,18 @@ const loading = ref(true)
 const activeOnly = ref(true)
 const updating = ref(null)
 const wsConnected = ref(false)
+const searchQuery = ref('')
+
+const filteredOrders = computed(() => {
+  if (!searchQuery.value.trim()) return orders.value
+  const q = searchQuery.value.trim().toLowerCase()
+  return orders.value.filter(o =>
+    o.orderNumber.toLowerCase().includes(q) ||
+    (o.customerName && o.customerName.toLowerCase().includes(q)) ||
+    (o.customerPhone && o.customerPhone.includes(q)) ||
+    (o.tableNumber && o.tableNumber.toString().includes(q))
+  )
+})
 
 const { connect } = useWebSocket()
 
