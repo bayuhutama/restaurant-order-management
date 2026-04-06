@@ -34,7 +34,7 @@
             <PhX class="h-3.5 w-3.5" />
           </button>
         </div>
-        <button @click="activeOnly = !activeOnly; loadOrders()" :class="activeOnly ? 'btn-primary btn-sm' : 'btn-secondary btn-sm'">
+        <button @click="activeOnly = !activeOnly" :class="activeOnly ? 'btn-primary btn-sm' : 'btn-secondary btn-sm'">
           {{ activeOnly ? 'Active Only' : 'All Orders' }}
         </button>
         <button @click="loadOrders" class="btn-secondary btn-sm">↺ Refresh</button>
@@ -159,9 +159,13 @@ const wsConnected = ref(false)
 const searchQuery = ref('')
 
 const filteredOrders = computed(() => {
-  if (!searchQuery.value.trim()) return orders.value
+  let result = orders.value
+  if (activeOnly.value) {
+    result = result.filter(o => !['DELIVERED', 'CANCELLED'].includes(o.status))
+  }
+  if (!searchQuery.value.trim()) return result
   const q = searchQuery.value.trim().toLowerCase()
-  return orders.value.filter(o =>
+  return result.filter(o =>
     o.orderNumber.toLowerCase().includes(q) ||
     (o.customerName && o.customerName.toLowerCase().includes(q)) ||
     (o.customerPhone && o.customerPhone.includes(q)) ||
@@ -195,7 +199,7 @@ function formatTime(dt) { return new Date(dt).toLocaleTimeString([], { hour: '2-
 async function loadOrders() {
   loading.value = true
   try {
-    const res = await staffApi.getOrders(activeOnly.value)
+    const res = await staffApi.getOrders(false)
     orders.value = res.data
   } catch (e) {
     console.error(e)
@@ -225,11 +229,7 @@ onMounted(() => {
       const idx = orders.value.findIndex(o => o.id === updated.id)
       if (idx !== -1) {
         orders.value[idx] = updated
-        // Remove from active list if no longer active
-        if (activeOnly.value && ['DELIVERED', 'CANCELLED'].includes(updated.status)) {
-          orders.value.splice(idx, 1)
-        }
-      } else if (!activeOnly.value || !['DELIVERED', 'CANCELLED'].includes(updated.status)) {
+      } else {
         orders.value.unshift(updated)
       }
     })
