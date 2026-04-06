@@ -2,7 +2,9 @@
   <!-- Staff Header -->
   <header class="bg-gray-900 text-white px-6 py-3 flex items-center justify-between sticky top-0 z-50 shadow-lg">
     <div class="flex items-center gap-3">
-      <div class="w-6 h-6 bg-orange-500 rounded-sm flex-shrink-0"></div>
+      <div class="w-6 h-6 bg-orange-500 rounded-md flex items-center justify-center flex-shrink-0">
+        <PhForkKnife class="w-3.5 h-3.5 text-white" weight="bold" />
+      </div>
       <span class="font-bold text-lg">Staff Portal</span>
       <span class="flex items-center gap-1 text-xs ml-4" :class="wsConnected ? 'text-green-400' : 'text-red-400'">
         <span class="w-2 h-2 rounded-full" :class="wsConnected ? 'bg-green-400 animate-pulse' : 'bg-red-400'"></span>
@@ -128,6 +130,7 @@ import { formatRupiah } from '@/utils/format'
 import { useAuthStore } from '@/stores/auth'
 import { useWebSocket } from '@/composables/useWebSocket'
 import OrderStatusBadge from '@/components/OrderStatusBadge.vue'
+import { PhForkKnife } from '@phosphor-icons/vue'
 
 const auth = useAuthStore()
 const router = useRouter()

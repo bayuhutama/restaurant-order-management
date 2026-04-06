@@ -2,7 +2,7 @@
   <div class="p-6">
     <div class="flex items-center justify-between mb-6">
       <h1 class="text-xl font-bold">All Orders</h1>
-      <button @click="load" class="btn-secondary btn-sm">↺ Refresh</button>
+      <button @click="load" class="btn-secondary btn-sm inline-flex items-center gap-1"><PhArrowCounterClockwise class="h-4 w-4" />Refresh</button>
     </div>
 
     <div v-if="loading" class="text-center py-20 text-gray-400">Loading...</div>
@@ -76,6 +76,7 @@ import { ref, onMounted } from 'vue'
 import { adminOrderApi } from '@/api'
 import { formatRupiah } from '@/utils/format'
 import OrderStatusBadge from '@/components/OrderStatusBadge.vue'
+import { PhArrowCounterClockwise } from '@phosphor-icons/vue'
 
 const orders = ref([])
 const loading = ref(true)

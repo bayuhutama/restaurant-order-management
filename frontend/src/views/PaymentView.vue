@@ -10,18 +10,14 @@
 
       <!-- Error -->
       <div v-else-if="loadError" class="card p-10 text-center">
-        <svg class="h-12 w-12 text-red-400 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
+        <PhWarningCircle class="h-12 w-12 text-red-400 mx-auto mb-3" />
         <p class="text-red-600 mb-4">{{ loadError }}</p>
         <RouterLink to="/" class="btn-secondary">Back to Menu</RouterLink>
       </div>
 
       <!-- Already paid -->
       <div v-else-if="order && order.status !== 'AWAITING_PAYMENT'" class="card p-10 text-center">
-        <svg class="h-12 w-12 text-green-500 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
+        <PhCheckCircle class="h-12 w-12 text-green-500 mx-auto mb-3" />
         <h2 class="text-xl font-bold mb-2">Payment already confirmed!</h2>
         <p class="text-gray-500 mb-6">This order has already been processed.</p>
         <RouterLink :to="`/track/${order.orderNumber}`" class="btn-primary">Track Your Order</RouterLink>
@@ -65,9 +61,7 @@
           <!-- CARD -->
           <div v-if="order.payment?.method === 'CARD'" class="space-y-4">
             <div class="flex items-center gap-3 p-4 bg-blue-50 rounded-xl border border-blue-200">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-blue-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-              </svg>
+              <PhCreditCard class="h-7 w-7 text-blue-500 flex-shrink-0" />
               <div>
                 <p class="font-medium text-blue-900">Card Payment</p>
                 <p class="text-sm text-blue-600">Your card will be charged {{ formatRupiah(order.totalAmount) }}</p>
@@ -134,9 +128,7 @@
 
           <!-- CASH -->
           <div v-else class="flex items-center gap-3 p-4 bg-green-50 rounded-xl border border-green-200">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-green-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
+            <PhMoney class="h-7 w-7 text-green-500 flex-shrink-0" />
             <div>
               <p class="font-medium text-green-900">Cash Payment</p>
               <p class="text-sm text-green-600">Our staff will collect {{ formatRupiah(order.totalAmount) }} at your table when the order is served.</p>
@@ -178,6 +170,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { orderApi } from '@/api'
 import { formatRupiah } from '@/utils/format'
+import { PhWarningCircle, PhCheckCircle, PhCreditCard, PhMoney } from '@phosphor-icons/vue'
 
 const route = useRoute()
 const router = useRouter()

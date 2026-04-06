@@ -3,7 +3,9 @@
     <!-- Admin Header -->
     <header class="bg-gray-950 text-white px-6 py-3 flex items-center justify-between sticky top-0 z-50 shadow-lg flex-shrink-0">
       <div class="flex items-center gap-3">
-        <div class="w-6 h-6 bg-orange-500 rounded-sm flex-shrink-0"></div>
+        <div class="w-6 h-6 bg-orange-500 rounded-md flex items-center justify-center flex-shrink-0">
+            <PhForkKnife class="w-3.5 h-3.5 text-white" weight="bold" />
+          </div>
         <span class="font-bold text-lg">Admin Portal</span>
       </div>
       <div class="flex items-center gap-3">
@@ -40,6 +42,7 @@
 <script setup>
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { PhForkKnife } from '@phosphor-icons/vue'
 
 const auth = useAuthStore()
 const router = useRouter()

@@ -13,9 +13,7 @@
     <!-- No active session -->
     <div v-else-if="!session" class="text-center py-20">
       <div class="flex justify-center mb-4">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-        </svg>
+        <PhClipboardText class="h-16 w-16 text-gray-300" />
       </div>
       <h2 class="text-xl font-semibold text-gray-700 mb-2">No active bill for this table.</h2>
       <p class="text-gray-400 text-sm mb-6">Place an order first to start a table session.</p>
@@ -26,9 +24,7 @@
     <div v-else-if="paid" class="text-center py-20">
       <div class="flex justify-center mb-4">
         <div class="h-20 w-20 rounded-full bg-green-100 flex items-center justify-center">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-          </svg>
+          <PhCheck class="h-10 w-10 text-green-500" />
         </div>
       </div>
       <h2 class="text-2xl font-bold text-gray-900 mb-2">Payment complete!</h2>
@@ -102,9 +98,7 @@
             :class="['p-4 rounded-xl border-2 text-center transition-all', paymentMethod === 'CASH' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-gray-300']"
           >
             <div class="flex justify-center mb-1">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
+              <PhMoney class="h-7 w-7 text-gray-600" />
             </div>
             <div class="font-medium">Cash</div>
             <div class="text-xs text-gray-500">Pay at counter</div>
@@ -116,9 +110,7 @@
             :class="['p-4 rounded-xl border-2 text-center transition-all', paymentMethod === 'CARD' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-gray-300']"
           >
             <div class="flex justify-center mb-1">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-              </svg>
+              <PhCreditCard class="h-7 w-7 text-gray-600" />
             </div>
             <div class="font-medium">Card</div>
             <div class="text-xs text-gray-500">Pay now (simulated)</div>
@@ -201,6 +193,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import { tableSessionApi } from '@/api'
 import { formatRupiah } from '@/utils/format'
+import { PhClipboardText, PhCheck, PhMoney, PhCreditCard } from '@phosphor-icons/vue'
 
 const route = useRoute()
 const tableNumber = route.params.tableNumber

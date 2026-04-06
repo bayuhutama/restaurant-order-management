@@ -48,7 +48,11 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(mysql:*)",
-      "Bash(/c/Program Files/MySQL/MySQL Server 8.0/bin/mysql.exe:*)"
+      "Bash(/c/Program Files/MySQL/MySQL Server 8.0/bin/mysql.exe:*)",
+      "Bash(grep -c \"<svg\" /c/Users/bayuhutama/Project/Claude/restaurant-order-management/frontend/src/views/*.vue)",
+      "Bash(grep -v \":0$\")",
+      "Bash(find:*)",
+      "Bash(npm uninstall:*)"
     ]
   }
 }

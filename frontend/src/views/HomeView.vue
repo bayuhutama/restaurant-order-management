@@ -24,8 +24,8 @@
       </span>
       <RouterLink
         :to="`/table/${tableStore.tableNumber}/bill`"
-        class="text-orange-600 font-semibold text-sm hover:text-orange-700"
-      >View Bill &rarr;</RouterLink>
+        class="text-orange-600 font-semibold text-sm hover:text-orange-700 inline-flex items-center gap-1"
+      >View Bill <PhArrowRight class="h-4 w-4" /></RouterLink>
     </div>
 
     <!-- Category Filter -->
@@ -92,6 +92,7 @@ import { menuApi, tableSessionApi } from '@/api'
 import { useTableStore } from '@/stores/table'
 import { formatRupiah } from '@/utils/format'
 import MenuCard from '@/components/MenuCard.vue'
+import { PhArrowRight } from '@phosphor-icons/vue'
 
 const router = useRouter()
 const route = useRoute()

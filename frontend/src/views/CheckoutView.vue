@@ -42,9 +42,7 @@
                   <p class="font-semibold text-green-900">Table {{ tableStore.tableNumber }}</p>
                   <p class="text-xs text-green-600">Set from QR code scan</p>
                 </div>
-                <svg class="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-                </svg>
+                <PhCheck class="h-5 w-5 text-green-500" />
               </div>
               <div v-else class="space-y-2">
                 <input
@@ -111,6 +109,7 @@ import { useCartStore } from '@/stores/cart'
 import { formatRupiah } from '@/utils/format'
 import { useTableStore } from '@/stores/table'
 import { orderApi } from '@/api'
+import { PhCheck } from '@phosphor-icons/vue'
 
 const cart = useCartStore()
 const tableStore = useTableStore()

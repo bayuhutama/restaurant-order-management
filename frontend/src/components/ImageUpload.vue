@@ -18,9 +18,7 @@
       />
 
       <div v-if="!modelValue || imgError" class="text-center p-4 z-10">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-gray-400 mx-auto mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-        </svg>
+        <PhImage class="h-8 w-8 text-gray-400 mx-auto mb-1" />
         <p class="text-sm font-medium text-gray-600">Click or drag & drop</p>
         <p class="text-xs text-gray-400">JPG, PNG, GIF, WebP · max 10 MB</p>
       </div>
@@ -40,7 +38,7 @@
         @click.stop="clear"
         class="absolute top-2 right-2 z-20 bg-red-500 hover:bg-red-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm shadow"
       >
-        ×
+        <PhX class="h-4 w-4" />
       </button>
     </div>
 
@@ -81,6 +79,7 @@
 <script setup>
 import { ref, watch } from 'vue'
 import { uploadApi } from '@/api'
+import { PhImage, PhX } from '@phosphor-icons/vue'
 
 const props = defineProps({
   modelValue: { type: String, default: '' }
