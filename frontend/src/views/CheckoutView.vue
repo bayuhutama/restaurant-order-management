@@ -156,7 +156,7 @@ async function submitOrder() {
   try {
     const res = await orderApi.placeOrder(payload)
     cart.clearCart()
-    router.push(`/track/${res.data.orderNumber}`)
+    router.push(`/payment/${res.data.orderNumber}`)
   } catch (e) {
     error.value = e.response?.data?.message || 'Failed to place order. Please try again.'
   } finally {
