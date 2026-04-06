@@ -41,11 +41,11 @@
 
         <form @submit.prevent="handleLogin" class="space-y-5">
           <div>
-            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Username</label>
+            <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Username</label>
             <input
               v-model="form.username"
               type="text"
-              class="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition"
+              class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition"
               placeholder="Input your Username"
               required
               autofocus
@@ -53,16 +53,16 @@
           </div>
 
           <div>
-            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Password</label>
+            <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Password</label>
             <div class="relative">
               <input
                 v-model="form.password"
                 :type="showPassword ? 'text' : 'password'"
-                class="w-full px-4 py-2.5 pr-10 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition"
+                class="w-full px-4 py-2.5 pr-10 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition"
                 placeholder="Input your Password"
                 required
               />
-              <button type="button" @click="showPassword = !showPassword" class="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600">
+              <button type="button" @click="showPassword = !showPassword" class="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                 <PhEye v-if="!showPassword" class="h-4 w-4" />
                 <PhEyeSlash v-else class="h-4 w-4" />
               </button>
@@ -84,7 +84,7 @@
         </form>
 
         <div class="mt-8 pt-6 border-t border-gray-100 text-center">
-          <RouterLink to="/" class="text-xs text-gray-400 hover:text-gray-600 transition">
+          <RouterLink to="/" class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition">
             <PhArrowLeft class="h-3 w-3 inline mr-1" />Back to Customer Menu
           </RouterLink>
         </div>

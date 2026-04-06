@@ -29,7 +29,7 @@
                 <p class="font-medium">{{ order.customerName || 'Guest' }}</p>
                 <p class="text-xs text-gray-400">{{ order.customerPhone || '' }}</p>
               </td>
-              <td class="px-4 py-3 text-gray-600">
+              <td class="px-4 py-3 text-gray-600 dark:text-gray-400">
                 {{ order.items.length }} item(s)
               </td>
               <td class="px-4 py-3 font-semibold text-orange-600">{{ formatRupiah(order.totalAmount) }}</td>

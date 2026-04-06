@@ -3,7 +3,7 @@
     <h1 class="text-3xl font-bold mb-8">Checkout</h1>
 
     <div v-if="cart.items.length === 0" class="text-center py-20">
-      <p class="text-gray-500 mb-4">Your cart is empty</p>
+      <p class="text-gray-500 dark:text-gray-400 mb-4">Your cart is empty</p>
       <RouterLink to="/" class="btn-primary">Browse Menu</RouterLink>
     </div>
 
@@ -72,7 +72,7 @@
 
           <div class="space-y-3 mb-4">
             <div v-for="item in cart.items" :key="item.id" class="flex justify-between text-sm">
-              <span class="text-gray-700">{{ item.name }} × {{ item.quantity }}</span>
+              <span class="text-gray-700 dark:text-gray-300">{{ item.name }} × {{ item.quantity }}</span>
               <span class="font-medium">{{ formatRupiah(item.price * item.quantity) }}</span>
             </div>
           </div>

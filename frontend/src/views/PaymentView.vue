@@ -19,7 +19,7 @@
       <div v-else-if="order && order.status !== 'AWAITING_PAYMENT'" class="card p-10 text-center">
         <PhCheckCircle class="h-12 w-12 text-green-500 mx-auto mb-3" />
         <h2 class="text-xl font-bold mb-2">Payment already confirmed!</h2>
-        <p class="text-gray-500 mb-6">This order has already been processed.</p>
+        <p class="text-gray-500 dark:text-gray-400 mb-6">This order has already been processed.</p>
         <RouterLink :to="`/track/${order.orderNumber}`" class="btn-primary">Track Your Order</RouterLink>
       </div>
 
@@ -27,7 +27,7 @@
       <div v-else-if="order" class="space-y-6">
         <div class="text-center">
           <h1 class="text-2xl font-bold">Complete Your Payment</h1>
-          <p class="text-gray-500 text-sm mt-1">Order <span class="font-mono font-semibold">{{ order.orderNumber }}</span></p>
+          <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">Order <span class="font-mono font-semibold">{{ order.orderNumber }}</span></p>
         </div>
 
         <!-- Order summary -->

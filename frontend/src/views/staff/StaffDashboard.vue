@@ -92,7 +92,7 @@
           </div>
         </div>
 
-        <div v-if="order.notes" class="text-xs text-gray-500 mb-3 italic">{{ order.notes }}</div>
+        <div v-if="order.notes" class="text-xs text-gray-500 dark:text-gray-400 mb-3 italic">{{ order.notes }}</div>
 
         <!-- Payment badge -->
         <div class="flex items-center gap-2 mb-4">

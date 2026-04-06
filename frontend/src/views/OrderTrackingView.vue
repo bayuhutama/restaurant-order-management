@@ -32,7 +32,7 @@
         <div class="flex items-start justify-between flex-wrap gap-3">
           <div>
             <p class="text-xs text-gray-400 uppercase tracking-wider mb-0.5">Order Number</p>
-            <p class="text-xl font-bold font-mono text-gray-900">{{ order.orderNumber }}</p>
+            <p class="text-xl font-bold font-mono text-gray-900 dark:text-gray-100">{{ order.orderNumber }}</p>
           </div>
           <OrderStatusBadge :status="order.status" />
         </div>

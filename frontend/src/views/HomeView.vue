@@ -10,7 +10,7 @@
   <div class="max-w-7xl mx-auto px-4 py-8">
     <!-- Hero -->
     <div class="text-center mb-10">
-      <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">Our Menu</h1>
+      <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-gray-100 mb-2">Our Menu</h1>
       <p class="text-gray-500 dark:text-gray-400">Fresh ingredients, amazing flavors</p>
     </div>
 
