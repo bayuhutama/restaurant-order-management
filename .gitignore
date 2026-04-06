@@ -1,0 +1,56 @@
+# ===== Backend (Spring Boot / Maven) =====
+backend/target/
+backend/*.db
+backend/restaurant.db
+backend/uploads/
+backend/.mvn/wrapper/maven-wrapper.jar
+!backend/.mvn/wrapper/maven-wrapper.properties
+backend/mvnw.cmd
+
+# ===== Frontend (Node / Vite) =====
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+
+# ===== Database =====
+*.db
+*.db-shm
+*.db-wal
+
+# ===== Uploads =====
+uploads/
+
+# ===== Java =====
+*.class
+*.jar
+*.war
+*.ear
+*.log
+hs_err_pid*
+
+# ===== IDE =====
+.idea/
+*.iml
+*.iws
+.eclipse/
+.settings/
+.classpath
+.project
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ===== Secrets =====
+.env
+*.pem
+*.key

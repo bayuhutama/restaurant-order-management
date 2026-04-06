@@ -41,7 +41,10 @@
       "Bash(npm audit:*)",
       "Bash(npm show:*)",
       "Bash(python3 -c \"import sys,json; vs=[v for v in json.load\\(sys.stdin\\) if v.startswith\\(''''5.''''\\)]; print\\(''''Latest 5.x:'''', vs[-1]\\)\")",
-      "Bash(python3 -c \"import sys,json; vs=[v for v in json.load\\(sys.stdin\\) if v.startswith\\(''''6.''''\\)]; print\\(''''Vite 6.x versions \\(last 10\\):'''', vs[-10:]\\)\")"
+      "Bash(python3 -c \"import sys,json; vs=[v for v in json.load\\(sys.stdin\\) if v.startswith\\(''''6.''''\\)]; print\\(''''Vite 6.x versions \\(last 10\\):'''', vs[-10:]\\)\")",
+      "Bash(xargs -0 --no-run-if-empty echo)",
+      "Bash(git rm:*)",
+      "Bash(git add:*)"
     ]
   }
 }
