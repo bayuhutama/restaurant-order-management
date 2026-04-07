@@ -12,6 +12,7 @@ A full-stack **dine-in** restaurant order management system. Customers scan a QR
 - [User Roles](#user-roles)
 - [Features](#features)
 - [Architecture](#architecture)
+- [Database (RDBMS)](#database-rdbms)
 - [API Reference](#api-reference)
 - [Frontend Routes](#frontend-routes)
 - [Flows](#flows)
@@ -217,6 +218,117 @@ src/
 ### Table Sessions
 
 Each table has a `TableSession` that accumulates orders from multiple customers. Sessions expire automatically after 60 minutes of inactivity (configurable). Staff can also close a session manually.
+
+---
+
+## Database (RDBMS)
+
+**MySQL 8.0** — schema is managed automatically by Hibernate (`ddl-auto=update`).
+
+### Entity Relationship Diagram
+
+```
+users ──────────────────< orders >──────────── table_sessions
+                           │  │
+              ─────────────┘  └──────── payments (1:1)
+             │
+        order_items >────── menu_items >────── categories
+```
+
+### Tables
+
+#### `users`
+| Column | Type | Constraints |
+|---|---|---|
+| `id` | BIGINT | PK, auto-increment |
+| `name` | VARCHAR | NOT NULL |
+| `username` | VARCHAR | NOT NULL, UNIQUE |
+| `email` | VARCHAR | NOT NULL, UNIQUE |
+| `password` | VARCHAR | NOT NULL (BCrypt hashed) |
+| `phone` | VARCHAR | nullable |
+| `role` | ENUM(`CUSTOMER`, `STAFF`, `ADMIN`) | NOT NULL |
+| `created_at` | DATETIME | set on insert |
+
+#### `categories`
+| Column | Type | Constraints |
+|---|---|---|
+| `id` | BIGINT | PK, auto-increment |
+| `name` | VARCHAR | NOT NULL |
+| `description` | VARCHAR | nullable |
+| `image_url` | VARCHAR | nullable |
+
+#### `menu_items`
+| Column | Type | Constraints |
+|---|---|---|
+| `id` | BIGINT | PK, auto-increment |
+| `name` | VARCHAR | NOT NULL |
+| `description` | VARCHAR(1000) | nullable |
+| `price` | DECIMAL | NOT NULL |
+| `image_url` | VARCHAR | nullable |
+| `category_id` | BIGINT | FK → `categories.id`, nullable |
+| `available` | BOOLEAN | NOT NULL, default `true` |
+| `created_at` | DATETIME | set on insert |
+
+#### `table_sessions`
+| Column | Type | Constraints |
+|---|---|---|
+| `id` | BIGINT | PK, auto-increment |
+| `table_number` | VARCHAR | NOT NULL |
+| `status` | ENUM(`OPEN`, `PAID`, `EXPIRED`) | NOT NULL |
+| `opened_at` | DATETIME | NOT NULL, set on insert |
+| `last_activity_at` | DATETIME | NOT NULL, updated on each order |
+| `closed_at` | DATETIME | nullable, set when closed |
+| `payment_method` | ENUM(`CASH`, `CARD`, `QR_CODE`) | nullable, set on payment |
+
+#### `orders`
+| Column | Type | Constraints |
+|---|---|---|
+| `id` | BIGINT | PK, auto-increment |
+| `order_number` | VARCHAR | NOT NULL, UNIQUE (e.g. `ORD-20250407-A1B2C3`) |
+| `user_id` | BIGINT | FK → `users.id`, nullable (null for guest orders) |
+| `guest_name` | VARCHAR | nullable |
+| `guest_phone` | VARCHAR | nullable |
+| `guest_email` | VARCHAR | nullable |
+| `status` | ENUM(`PENDING`, `CONFIRMED`, `PREPARING`, `READY`, `DELIVERED`, `CANCELLED`) | NOT NULL |
+| `notes` | VARCHAR(500) | nullable |
+| `table_number` | VARCHAR | NOT NULL |
+| `total_amount` | DECIMAL | NOT NULL |
+| `table_session_id` | BIGINT | FK → `table_sessions.id` |
+| `created_at` | DATETIME | set on insert |
+| `updated_at` | DATETIME | updated on every change |
+
+#### `order_items`
+| Column | Type | Constraints |
+|---|---|---|
+| `id` | BIGINT | PK, auto-increment |
+| `order_id` | BIGINT | FK → `orders.id`, NOT NULL |
+| `menu_item_id` | BIGINT | FK → `menu_items.id`, NOT NULL |
+| `quantity` | INT | NOT NULL |
+| `unit_price` | DECIMAL | NOT NULL (snapshot of price at order time) |
+| `notes` | VARCHAR | nullable |
+
+#### `payments`
+| Column | Type | Constraints |
+|---|---|---|
+| `id` | BIGINT | PK, auto-increment |
+| `order_id` | BIGINT | FK → `orders.id`, NOT NULL, UNIQUE (1:1) |
+| `method` | ENUM(`CASH`, `CARD`, `QR_CODE`) | NOT NULL |
+| `status` | ENUM(`PENDING`, `PAID`) | NOT NULL |
+| `amount` | DECIMAL | NOT NULL |
+| `transaction_id` | VARCHAR | nullable, set when paid (e.g. `TXN-AB12CD34`) |
+| `paid_at` | DATETIME | nullable, set when paid |
+| `created_at` | DATETIME | set on insert |
+
+### Relationships
+
+| Relationship | Type | Description |
+|---|---|---|
+| `orders` → `users` | Many-to-One (nullable) | Registered customer orders; null for guest orders |
+| `orders` → `table_sessions` | Many-to-One | All orders at a table share one session |
+| `order_items` → `orders` | Many-to-One | Each order has one or more items |
+| `order_items` → `menu_items` | Many-to-One | Links ordered item to the menu; `unit_price` snapshots the price |
+| `payments` → `orders` | One-to-One | Each order has exactly one payment record |
+| `menu_items` → `categories` | Many-to-One (nullable) | Items may belong to a category |
 
 ---
 
