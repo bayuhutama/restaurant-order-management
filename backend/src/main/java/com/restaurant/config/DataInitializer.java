@@ -41,7 +41,7 @@ public class DataInitializer implements CommandLineRunner {
                     .role(Role.ADMIN)
                     .phone("0800000001")
                     .build());
-            log.info("Created default admin: admin / Admin123!");
+            log.info("Created default admin account.");
         }
 
         if (!userRepository.existsByUsername("staff")) {
@@ -53,7 +53,7 @@ public class DataInitializer implements CommandLineRunner {
                     .role(Role.STAFF)
                     .phone("0800000002")
                     .build());
-            log.info("Created default staff: staff / Staff123!");
+            log.info("Created default staff account.");
         }
     }
 

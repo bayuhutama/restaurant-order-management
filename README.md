@@ -87,6 +87,40 @@ The frontend starts on **http://localhost:5173**.
 | `/admin/orders` | All orders view |
 | `/admin/tables` | QR code generator |
 
+## Design Patterns
+
+### Architectural Patterns
+
+| Pattern | Where |
+|---|---|
+| **MVC** | `controller/` → `service/` → `model/` layered separation |
+| **Repository** | `OrderRepository`, `UserRepository`, etc. — data access abstracted behind interfaces |
+| **Service Layer** | `OrderService`, `AuthService` — business logic isolated from controllers |
+| **DTO (Data Transfer Object)** | `dto/order/`, `dto/auth/`, `dto/menu/` — separate request/response shapes from JPA entities |
+
+### GoF Patterns
+
+| Pattern | Where |
+|---|---|
+| **Builder** | Lombok `@Builder` on all JPA entities (`Order.builder()`, `User.builder()`, etc.) |
+| **State Machine** | `VALID_TRANSITIONS` map in `OrderService` — all allowed order status transitions declared explicitly |
+| **Chain of Responsibility** | Spring Security filter chain → `JwtAuthenticationFilter` → controllers |
+| **Template Method** | `JwtAuthenticationFilter extends OncePerRequestFilter` — Spring defines the template, filter fills in `doFilterInternal` |
+| **Observer** | WebSocket broadcast via `SimpMessagingTemplate` — staff dashboard reacts to order events in real time |
+| **Singleton** | All Spring `@Component` / `@Service` / `@Repository` beans |
+| **Proxy** | Spring AOP — `@Transactional` wraps service methods transparently |
+| **Lazy Initialization** | `@Lazy` setter injection in `OrderService` to break the circular dependency with `TableSessionService` |
+
+### Frontend Patterns
+
+| Pattern | Where |
+|---|---|
+| **Store (Flux/Pinia)** | `stores/auth.js`, `stores/cart.js`, `stores/table.js`, `stores/orders.js` — centralized reactive state |
+| **Composable / Custom Hook** | `composables/useWebSocket.js`, `composables/useDialog.js` — reusable stateful logic |
+| **Singleton** | `useDialog` — module-level state shared as a singleton across all components |
+| **Facade** | `api/index.js` — wraps all Axios calls behind named functions (`staffApi`, `tableSessionApi`, etc.) |
+| **Router Guard** | `router/index.js` navigation guards — controls route access per role |
+
 ## Order Status Flow
 
 ```

@@ -3,6 +3,7 @@ package com.restaurant.security;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.security.MacAlgorithm;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
@@ -20,6 +21,8 @@ public class JwtUtil {
     @Value("${jwt.expiration}")
     private long expiration;
 
+    private static final MacAlgorithm ALGORITHM = Jwts.SIG.HS256;
+
     private SecretKey getSigningKey() {
         return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
@@ -29,7 +32,7 @@ public class JwtUtil {
                 .subject(userDetails.getUsername())
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + expiration))
-                .signWith(getSigningKey())
+                .signWith(getSigningKey(), ALGORITHM)
                 .compact();
     }
 
@@ -49,6 +52,7 @@ public class JwtUtil {
     private Claims getClaims(String token) {
         return Jwts.parser()
                 .verifyWith(getSigningKey())
+                .requireAlgorithm(ALGORITHM.getId())
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();

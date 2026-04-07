@@ -119,7 +119,7 @@ public class OrderService {
      */
     @Transactional
     public OrderResponse confirmPayment(String orderNumber) {
-        Order order = orderRepository.findByOrderNumber(orderNumber)
+        Order order = orderRepository.findByOrderNumberForUpdate(orderNumber)
                 .orElseThrow(() -> new RuntimeException("Order not found: " + orderNumber));
 
         Payment payment = order.getPayment();
