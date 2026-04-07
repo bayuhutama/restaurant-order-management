@@ -64,10 +64,8 @@ The frontend starts on **http://localhost:5173**.
 
 ## Default Accounts
 
-| Role  | Username | Password  |
-|-------|----------|-----------|
-| Admin | admin    | Admin123! |
-| Staff | staff    | Staff123! |
+Default admin and staff accounts are seeded automatically on first run via `DataInitializer`.
+Credentials are defined in the source — **change them before any non-local deployment**.
 
 ## Routes
 
