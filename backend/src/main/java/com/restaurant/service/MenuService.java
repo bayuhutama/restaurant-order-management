@@ -9,10 +9,12 @@ import com.restaurant.model.MenuItem;
 import com.restaurant.repository.CategoryRepository;
 import com.restaurant.repository.MenuItemRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class MenuService {
@@ -38,7 +40,9 @@ public class MenuService {
                 .description(request.description())
                 .imageUrl(request.imageUrl())
                 .build();
-        return mapCategory(categoryRepository.save(category));
+        CategoryResponse response = mapCategory(categoryRepository.save(category));
+        log.info("Category created: id={}, name={}", response.id(), response.name());
+        return response;
     }
 
     public CategoryResponse updateCategory(Long id, CategoryRequest request) {
@@ -47,7 +51,9 @@ public class MenuService {
         category.setName(request.name());
         category.setDescription(request.description());
         category.setImageUrl(request.imageUrl());
-        return mapCategory(categoryRepository.save(category));
+        CategoryResponse response = mapCategory(categoryRepository.save(category));
+        log.info("Category updated: id={}, name={}", id, response.name());
+        return response;
     }
 
     public void deleteCategory(Long id) {
@@ -55,6 +61,7 @@ public class MenuService {
             throw new RuntimeException("Category not found");
         }
         categoryRepository.deleteById(id);
+        log.info("Category deleted: id={}", id);
     }
 
     // ── Menu Items ───────────────────────────────────────────────────────────
@@ -97,7 +104,9 @@ public class MenuService {
                 .available(request.available())
                 .build();
 
-        return mapMenuItem(menuItemRepository.save(item));
+        MenuItemResponse response = mapMenuItem(menuItemRepository.save(item));
+        log.info("MenuItem created: id={}, name={}", response.id(), response.name());
+        return response;
     }
 
     public MenuItemResponse updateMenuItem(Long id, MenuItemRequest request) {
@@ -117,7 +126,9 @@ public class MenuService {
         item.setCategory(category);
         item.setAvailable(request.available());
 
-        return mapMenuItem(menuItemRepository.save(item));
+        MenuItemResponse response = mapMenuItem(menuItemRepository.save(item));
+        log.info("MenuItem updated: id={}, name={}", id, response.name());
+        return response;
     }
 
     public void deleteMenuItem(Long id) {
@@ -125,13 +136,16 @@ public class MenuService {
             throw new RuntimeException("Menu item not found");
         }
         menuItemRepository.deleteById(id);
+        log.info("MenuItem deleted: id={}", id);
     }
 
     public MenuItemResponse toggleAvailability(Long id) {
         MenuItem item = menuItemRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Menu item not found"));
         item.setAvailable(!item.isAvailable());
-        return mapMenuItem(menuItemRepository.save(item));
+        MenuItemResponse response = mapMenuItem(menuItemRepository.save(item));
+        log.info("MenuItem availability toggled: id={}, available={}", id, response.available());
+        return response;
     }
 
     // ── Mappers ──────────────────────────────────────────────────────────────

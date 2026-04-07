@@ -7,6 +7,7 @@ import com.restaurant.model.enums.PaymentMethod;
 import com.restaurant.model.enums.PaymentStatus;
 import com.restaurant.repository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -23,6 +24,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class OrderService {
@@ -105,6 +107,9 @@ public class OrderService {
 
         tableSessionService.touchSession(session);
 
+        log.info("Order placed: orderNumber={}, table={}, items={}, total={}",
+                savedOrder.getOrderNumber(), request.tableNumber(), items.size(), total);
+
         OrderResponse response = mapToResponse(savedOrder);
         // Notify staff immediately — no pre-payment required
         messagingTemplate.convertAndSend("/topic/orders", response);
@@ -138,6 +143,8 @@ public class OrderService {
 
         Order saved = orderRepository.save(order);
         saved.setPayment(payment);
+
+        log.info("Payment confirmed: orderNumber={}, txnId={}", saved.getOrderNumber(), payment.getTransactionId());
 
         OrderResponse response = mapToResponse(saved);
 
@@ -210,6 +217,7 @@ public class OrderService {
             }
         }
 
+        log.info("Order status updated: id={}, {} -> {}", id, order.getStatus(), newStatus);
         order.setStatus(newStatus);
 
         // Auto-mark cash payment as paid when delivered

@@ -40,12 +40,16 @@ public class TableSessionService {
     public TableSession getOrCreateSession(String tableNumber) {
         return tableSessionRepository
                 .findByTableNumberAndStatusForUpdate(tableNumber, TableSessionStatus.OPEN)
-                .orElseGet(() -> tableSessionRepository.save(
-                        TableSession.builder()
-                                .tableNumber(tableNumber)
-                                .status(TableSessionStatus.OPEN)
-                                .build()
-                ));
+                .orElseGet(() -> {
+                    TableSession session = tableSessionRepository.save(
+                            TableSession.builder()
+                                    .tableNumber(tableNumber)
+                                    .status(TableSessionStatus.OPEN)
+                                    .build()
+                    );
+                    log.info("Session opened: table={}, sessionId={}", tableNumber, session.getId());
+                    return session;
+                });
     }
 
     @Transactional
@@ -74,6 +78,7 @@ public class TableSessionService {
         session.setStatus(TableSessionStatus.EXPIRED);
         session.setClosedAt(LocalDateTime.now());
         tableSessionRepository.save(session);
+        log.info("Session closed by staff: table={}, sessionId={}", tableNumber, session.getId());
     }
 
     @Transactional
@@ -98,6 +103,7 @@ public class TableSessionService {
         session.setPaymentMethod(request.paymentMethod());
         TableSession saved = tableSessionRepository.save(session);
         saved.setOrders(orders);
+        log.info("Session paid: table={}, sessionId={}, method={}", tableNumber, session.getId(), request.paymentMethod());
         return mapToResponse(saved);
     }
 
