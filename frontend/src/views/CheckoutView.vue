@@ -103,6 +103,23 @@
 </template>
 
 <script setup>
+/**
+ * Checkout page — collects optional contact info, table number, and notes,
+ * then submits the order to the backend.
+ *
+ * Table number precedence:
+ * 1. tableStore.tableNumber (set by QR scan) — shown as a locked green badge
+ * 2. form.tableNumber (manual entry) — shown as a text input with a hint
+ *
+ * After a successful order:
+ * - Cart is cleared
+ * - Table number is saved to tableStore if it was entered manually
+ * - Order number is saved to ordersStore
+ * - Redirects to /payment/:orderNumber
+ *
+ * Payment method is hardcoded to CASH here; the customer selects QR/Card/Cash
+ * on the payment page.
+ */
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCartStore } from '@/stores/cart'
@@ -129,7 +146,7 @@ const submitting = ref(false)
 const error = ref('')
 const tableError = ref(false)
 
-// The effective table number — from QR store if available, otherwise from manual input
+// Prefers the QR-scanned table number; falls back to the manually entered one
 const effectiveTable = computed(() =>
   tableStore.tableNumber || form.value.tableNumber.trim()
 )

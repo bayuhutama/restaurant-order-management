@@ -58,6 +58,13 @@
 </template>
 
 <script setup>
+/**
+ * Admin portal shell layout.
+ * Provides a sticky header with the logout button and a collapsible sidebar.
+ * On desktop (lg+) the sidebar is always visible.
+ * On mobile, a hamburger button toggles the sidebar with a backdrop overlay.
+ * All admin child views are rendered via RouterView in the main content area.
+ */
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -65,13 +72,14 @@ import { PhForkKnife, PhList } from '@phosphor-icons/vue'
 
 const auth = useAuthStore()
 const router = useRouter()
-const sidebarOpen = ref(false)
+const sidebarOpen = ref(false)  // controls mobile sidebar visibility
 
 function handleLogout() {
   auth.logout()
   router.push('/admin/login')
 }
 
+// Sidebar navigation links — order determines display order
 const navLinks = [
   { to: '/admin/menu', label: 'Menu Items' },
   { to: '/admin/categories', label: 'Categories' },

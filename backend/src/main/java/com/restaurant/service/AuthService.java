@@ -14,6 +14,11 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+/**
+ * Handles user registration and login.
+ * All self-registered users are assigned the CUSTOMER role.
+ * STAFF and ADMIN accounts are seeded by DataInitializer or created manually.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -24,6 +29,10 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
 
+    /**
+     * Creates a new CUSTOMER account and immediately returns a JWT token.
+     * Throws if the username or email is already taken.
+     */
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByUsername(request.username())
                 || userRepository.existsByEmail(request.email())) {
@@ -47,7 +56,12 @@ public class AuthService {
         return new AuthResponse(token, user.getId(), user.getName(), user.getUsername(), user.getRole().name());
     }
 
+    /**
+     * Authenticates with username + password via Spring Security's AuthenticationManager.
+     * Throws BadCredentialsException (→ 401) if credentials are wrong.
+     */
     public AuthResponse login(LoginRequest request) {
+        // Delegates to DaoAuthenticationProvider — throws BadCredentialsException on failure
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.username(), request.password())
         );

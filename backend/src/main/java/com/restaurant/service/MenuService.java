@@ -14,6 +14,10 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+/**
+ * Business logic for menu categories and items.
+ * Read operations are public; write operations are called only from AdminController.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -66,6 +70,10 @@ public class MenuService {
 
     // ── Menu Items ───────────────────────────────────────────────────────────
 
+    /**
+     * Returns menu items filtered by optional categoryId and/or availability flag.
+     * Both filters can be combined; if neither is provided, all items are returned.
+     */
     public List<MenuItemResponse> getAllMenuItems(Long categoryId, Boolean availableOnly) {
         List<MenuItem> items;
 
@@ -89,6 +97,7 @@ public class MenuService {
     }
 
     public MenuItemResponse createMenuItem(MenuItemRequest request) {
+        // Category is optional; item can exist without one
         Category category = null;
         if (request.categoryId() != null) {
             category = categoryRepository.findById(request.categoryId())
@@ -139,6 +148,7 @@ public class MenuService {
         log.info("MenuItem deleted: id={}", id);
     }
 
+    /** Flips the available flag; returns the updated item. */
     public MenuItemResponse toggleAvailability(Long id) {
         MenuItem item = menuItemRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Menu item not found"));
@@ -154,6 +164,7 @@ public class MenuService {
         return new CategoryResponse(c.getId(), c.getName(), c.getDescription(), c.getImageUrl());
     }
 
+    /** Public so TableSessionService can reuse it when building session responses. */
     public MenuItemResponse mapMenuItem(MenuItem m) {
         CategoryResponse cat = m.getCategory() != null ? mapCategory(m.getCategory()) : null;
         return new MenuItemResponse(m.getId(), m.getName(), m.getDescription(), m.getPrice(),

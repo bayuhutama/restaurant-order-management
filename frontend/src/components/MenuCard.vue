@@ -51,6 +51,17 @@
 </template>
 
 <script setup>
+/**
+ * Menu item card displayed on the customer home page.
+ * Equal-height layout via flex-col + flex-1 on the content area.
+ *
+ * Quantity controls:
+ * - When item is not in cart: shows "Add to Cart" button
+ * - When item is in cart: shows inline +/- stepper with current quantity
+ *
+ * Description is clamped to 2 lines; full text shown in a CSS tooltip on hover.
+ * Unavailable items show a dark overlay and the Add button is disabled.
+ */
 import { computed } from 'vue'
 import { useCartStore } from '@/stores/cart'
 import { formatRupiah } from '@/utils/format'
@@ -61,6 +72,7 @@ const props = defineProps({
 
 const cart = useCartStore()
 
+// Returns 0 if the item is not in the cart, otherwise returns its quantity
 const quantityInCart = computed(() => {
   const found = cart.items.find(i => i.id === props.item.id)
   return found ? found.quantity : 0

@@ -134,6 +134,19 @@
 </template>
 
 <script setup>
+/**
+ * Admin menu item management page.
+ * Supports creating, editing, deleting, and toggling availability of menu items.
+ *
+ * Filtering (client-side computed):
+ * - By category (dropdown)
+ * - By availability (dropdown)
+ * - By name or description (search input)
+ * All three filters are combined with AND logic.
+ *
+ * Uses Modal + ImageUpload for the create/edit form.
+ * Availability can also be toggled inline from the table row without opening the modal.
+ */
 import { ref, computed, onMounted } from 'vue'
 import { menuApi, adminMenuApi } from '@/api'
 import { formatRupiah } from '@/utils/format'
@@ -146,7 +159,7 @@ const menuItems = ref([])
 const categories = ref([])
 const loading = ref(true)
 const showModal = ref(false)
-const editing = ref(null)
+const editing = ref(null)   // holds the ID being edited; null = creating new
 const saving = ref(false)
 const error = ref('')
 const filterCategory = ref('')
@@ -156,6 +169,7 @@ const form = ref({ name: '', description: '', price: '', imageUrl: '', categoryI
 const searchQuery = ref('')
 const { showConfirm, showAlert } = useDialog()
 
+/** Applies all three filters (category, availability, search text) to the full items list. */
 const displayedItems = computed(() => {
   return menuItems.value.filter(item => {
     if (filterCategory.value && item.category?.id !== Number(filterCategory.value)) return false

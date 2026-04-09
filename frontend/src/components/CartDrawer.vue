@@ -68,6 +68,12 @@
 </template>
 
 <script setup>
+/**
+ * Slide-in cart drawer rendered when the cart icon in the Navbar is clicked.
+ * Displays all items with quantity controls and the total.
+ * Clicking the backdrop or × button emits 'close' to the parent.
+ * "Proceed to Checkout" closes the drawer and navigates to /checkout.
+ */
 import { useCartStore } from '@/stores/cart'
 import { useRouter } from 'vue-router'
 import { formatRupiah } from '@/utils/format'

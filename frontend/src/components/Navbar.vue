@@ -54,6 +54,17 @@
 </template>
 
 <script setup>
+/**
+ * Customer-facing top navigation bar (hidden on staff/admin routes).
+ *
+ * Features:
+ * - Cart icon with item-count badge; opens CartDrawer on click
+ * - My Orders icon with active-order badge (count of PENDING/CONFIRMED/PREPARING/READY orders)
+ *
+ * Polling: every 30 seconds, refreshStatuses() fetches the current status of
+ * all orders for the active table. If the table session is gone (404), it clears
+ * the stored orders and resets the table store so the UI reflects the ended session.
+ */
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useCartStore } from '@/stores/cart'
 import { useOrdersStore } from '@/stores/orders'
@@ -67,26 +78,33 @@ const ordersStore = useOrdersStore()
 const tableStore = useTableStore()
 const cartOpen = ref(false)
 
+// Statuses that count as "active" for the orders badge
 const ACTIVE_STATUSES = ['PENDING', 'CONFIRMED', 'PREPARING', 'READY']
 
+// Order numbers for the current table (scoped to avoid showing other tables' orders)
 const tableOrderNumbers = computed(() =>
   tableStore.tableNumber ? ordersStore.getNumbersForTable(tableStore.tableNumber) : []
 )
 
-// Track active order statuses for the badge
+// Map of orderNumber → current status, refreshed by polling
 const orderStatuses = ref({})
 
+/** Number of orders currently in an active (in-progress) state — shown as the badge. */
 const activeOrderCount = computed(() =>
   Object.values(orderStatuses.value).filter(s => ACTIVE_STATUSES.includes(s)).length
 )
 
 let pollInterval = null
 
+/**
+ * Fetches the latest status for each order at the current table.
+ * Also checks the session is still OPEN; clears everything if it ended.
+ */
 async function refreshStatuses() {
   if (!tableStore.tableNumber) { orderStatuses.value = {}; return }
   if (tableOrderNumbers.value.length === 0) { orderStatuses.value = {}; return }
 
-  // Session check only needed when there are stored orders
+  // A 404 here means the session was ended by staff — clear stored orders
   try {
     await tableSessionApi.getSession(tableStore.tableNumber)
   } catch {
@@ -95,6 +113,8 @@ async function refreshStatuses() {
     orderStatuses.value = {}
     return
   }
+
+  // Fetch all order statuses in parallel; ignore any individual failures
   const results = await Promise.allSettled(
     tableOrderNumbers.value.map(n => orderApi.trackOrder(n))
   )
@@ -109,6 +129,7 @@ async function refreshStatuses() {
 
 onMounted(() => {
   refreshStatuses()
+  // Poll every 30 seconds so the badge stays up to date without WebSocket on this component
   pollInterval = setInterval(refreshStatuses, 30_000)
 })
 

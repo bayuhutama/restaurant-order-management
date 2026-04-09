@@ -86,6 +86,17 @@
 </template>
 
 <script setup>
+/**
+ * Global dialog component — replaces native browser alert() and confirm().
+ * Reads from the useDialog singleton state and renders as an overlay.
+ *
+ * Two dialog types:
+ * - 'alert':   single OK button; used for informational messages
+ * - 'confirm': Cancel + Confirm buttons; used for destructive actions
+ *
+ * Variant 'danger' applies red styling to the icon and Confirm button.
+ * Teleported to <body> so it renders above all other stacking contexts.
+ */
 import { useDialog } from '@/composables/useDialog'
 import { PhWarning, PhInfo } from '@phosphor-icons/vue'
 

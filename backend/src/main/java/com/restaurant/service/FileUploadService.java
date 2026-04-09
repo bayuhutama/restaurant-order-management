@@ -13,19 +13,42 @@ import java.nio.file.StandardCopyOption;
 import java.util.Set;
 import java.util.UUID;
 
+/**
+ * Handles secure image file uploads for menu items and categories.
+ *
+ * Security measures applied:
+ * 1. Declared content-type must be an allowed image MIME type.
+ * 2. Actual file magic bytes are inspected to prevent content-type spoofing.
+ * 3. File size is capped at 10 MB.
+ * 4. The saved filename is a random UUID — the original user-supplied name is never used.
+ * 5. The resolved target path is checked to stay inside uploadDir (path traversal guard).
+ *
+ * Files are served as static resources at /uploads/** via WebConfig.
+ */
 @Service
 public class FileUploadService {
 
+    /** MIME types accepted for upload. */
     private static final Set<String> ALLOWED_TYPES = Set.of(
             "image/jpeg", "image/png", "image/gif", "image/webp"
     );
 
+    /** Directory where uploaded files are stored; configurable via upload.dir property. */
     @Value("${upload.dir:uploads}")
     private String uploadDir;
 
+    /** Base URL prepended to the filename in the returned URL; matches the running server. */
     @Value("${app.base-url:http://localhost:8080}")
     private String baseUrl;
 
+    /**
+     * Saves the uploaded file and returns its public URL.
+     *
+     * @param file the multipart file from the HTTP request
+     * @return the public URL (e.g. http://localhost:8080/uploads/abc123.jpg)
+     * @throws IOException      if writing to disk fails
+     * @throws RuntimeException if content-type or file content is not an allowed image
+     */
     public String save(MultipartFile file) throws IOException {
         // Validate declared content-type first
         String contentType = file.getContentType();
@@ -69,6 +92,12 @@ public class FileUploadService {
     /**
      * Reads the first 12 bytes of the stream and identifies the image type by magic bytes.
      * This cannot be spoofed via HTTP headers or filename manipulation.
+     *
+     * Signatures checked:
+     * - JPEG: FF D8 FF
+     * - PNG:  89 50 4E 47 (‰PNG)
+     * - GIF:  47 49 46 38 (GIF8)
+     * - WebP: 52 49 46 46 ?? ?? ?? ?? 57 45 42 50 (RIFF????WEBP)
      */
     private String detectMimeType(InputStream in) throws IOException {
         byte[] header = new byte[12];

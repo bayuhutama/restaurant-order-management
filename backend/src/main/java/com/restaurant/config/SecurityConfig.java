@@ -25,6 +25,23 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
 
+/**
+ * Spring Security configuration for the REST API.
+ *
+ * Authentication: stateless JWT — no HTTP sessions are created.
+ * Authorization: defined per-route below; method-level @PreAuthorize also enabled.
+ *
+ * Public endpoints (no token required):
+ * - /api/auth/**          — login and register
+ * - GET /api/categories/** — menu categories
+ * - GET /api/menu/**       — menu items
+ * - POST /api/orders       — place an order (guests allowed)
+ * - GET /api/orders/track/** — track an order
+ * - POST /api/orders/{orderNumber}/pay — confirm payment
+ * - /api/table-sessions/** — table bill and session status
+ * - /uploads/**            — static uploaded images
+ * - /ws/**                 — WebSocket connections
+ */
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
@@ -37,7 +54,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(AbstractHttpConfigurer::disable)
+            .csrf(AbstractHttpConfigurer::disable)          // CSRF not needed for stateless JWT APIs
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
@@ -60,6 +77,10 @@ public class SecurityConfig {
         return http.build();
     }
 
+    /**
+     * CORS configuration allowing the Vite dev server to call the API.
+     * Update allowedOrigins for staging/production deployments.
+     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
@@ -72,6 +93,7 @@ public class SecurityConfig {
         return source;
     }
 
+    /** DAO-based authentication provider that uses UserDetailsServiceImpl and BCrypt. */
     @Bean
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
@@ -80,11 +102,13 @@ public class SecurityConfig {
         return provider;
     }
 
+    /** Exposes the AuthenticationManager bean so AuthService can inject it. */
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
 
+    /** BCrypt with default strength (10 rounds) for password hashing. */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();

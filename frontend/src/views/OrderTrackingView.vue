@@ -155,6 +155,17 @@
 </template>
 
 <script setup>
+/**
+ * Live order tracking page for a single order.
+ * Shows a vertical progress stepper with the current step highlighted.
+ *
+ * Real-time updates: subscribes to /topic/orders/{orderNumber} via WebSocket
+ * so the stepper advances automatically without a page refresh.
+ *
+ * Step logic:
+ * - isCompleted(status): that step's index < current step's index
+ * - isActive(status):    that step's status === order.status
+ */
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { orderApi } from '@/api'
@@ -168,6 +179,7 @@ const order = ref(null)
 const loading = ref(true)
 const error = ref('')
 
+// Ordered step definitions — index position is used for the "completed" check
 const steps = [
   { status: 'PENDING',   label: 'Order Received',   description: 'Your order has been received and is awaiting confirmation from the kitchen.' },
   { status: 'CONFIRMED', label: 'Order Confirmed',   description: 'The kitchen has confirmed your order and will begin preparing it soon.' },

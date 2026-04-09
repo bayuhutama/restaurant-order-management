@@ -45,14 +45,27 @@
 </template>
 
 <script setup>
+/**
+ * Admin QR code generator for table numbers.
+ * Generates one QR code per table that encodes the URL: {baseUrl}/?table={n}
+ * Customers scan the QR code and are taken to the menu with the table pre-filled.
+ *
+ * The base URL defaults to the current origin with port 8080 replaced by 5173
+ * (assumes the Vite dev server) — this should be changed to the production domain.
+ *
+ * QR codes can be printed via the browser's print dialog; CSS print styles
+ * hide the navigation and show only the QR grid.
+ */
 import { ref } from 'vue'
 import QRCode from 'qrcode'
 
 const tableCount = ref(10)
+// Default to Vite dev server URL; change for production
 const baseUrl = ref(window.location.origin.replace('8080', '5173'))
 const qrCodes = ref([])
 const generating = ref(false)
 
+/** Generates QR codes for tables 1 through tableCount. */
 async function generateAll() {
   generating.value = true
   qrCodes.value = []

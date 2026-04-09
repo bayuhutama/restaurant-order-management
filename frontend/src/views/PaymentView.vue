@@ -194,6 +194,17 @@
 </template>
 
 <script setup>
+/**
+ * Payment page for a single order.
+ * Three payment method tabs:
+ * - QR Code: generates a QR code from the order reference using the 'qrcode' library
+ * - Card:    collects card details with Luhn validation (cosmetic — not connected to a payment gateway)
+ * - Cash:    shows the order number for the customer to quote at the cashier
+ *
+ * Confirming any method calls POST /api/orders/{orderNumber}/pay, which marks
+ * the payment as PAID and allows staff to advance the order to CONFIRMED.
+ * After confirmation, redirects to /my-orders.
+ */
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import QRCode from 'qrcode'
@@ -218,13 +229,14 @@ const tabs = [
   { value: 'CASH', label: 'Cash',       icon: PhMoney },
 ]
 
-// Card fields (cosmetic — no real processing)
+// Card form fields — validation is UI-only (Luhn check + expiry check), no real gateway
 const cardName = ref('')
 const cardNumber = ref('')
 const expiry = ref('')
 const cvv = ref('')
 const errors = ref({ cardName: '', cardNumber: '', expiry: '', cvv: '' })
 
+/** Validates a card number using the Luhn algorithm. */
 function luhn(number) {
   const digits = number.replace(/\D/g, '')
   let sum = 0

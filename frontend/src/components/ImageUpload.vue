@@ -77,6 +77,17 @@
 </template>
 
 <script setup>
+/**
+ * Image upload component supporting three input methods:
+ * 1. Click-to-browse — opens the native file picker
+ * 2. Drag & drop — drop a file onto the preview area
+ * 3. URL paste — type or paste an image URL into the input field
+ *
+ * v-model compatible: emits 'update:modelValue' with the final URL.
+ * While uploading, shows a local blob preview instantly, then replaces it
+ * with the server URL once the upload completes.
+ * Upload is handled by FileUploadController (admin only, JPEG/PNG/GIF/WebP, max 10 MB).
+ */
 import { ref, watch } from 'vue'
 import { uploadApi } from '@/api'
 import { PhImage, PhX } from '@phosphor-icons/vue'
@@ -90,10 +101,10 @@ const fileInput = ref(null)
 const uploading = ref(false)
 const uploadError = ref('')
 const isDragging = ref(false)
-const imgError = ref(false)
-const urlDraft = ref('')
+const imgError = ref(false)   // true when the img src fails to load
+const urlDraft = ref('')      // tracks the URL input field independently
 
-// Sync url draft when parent changes value externally
+// Sync the URL input when the parent changes the value externally
 watch(() => props.modelValue, (val) => {
   if (val && !val.startsWith('blob:')) {
     urlDraft.value = val
@@ -127,7 +138,7 @@ async function upload(file) {
   uploading.value = true
   imgError.value = false
 
-  // Instant local preview while uploading
+  // Show a local blob URL as an instant preview while the upload is in progress
   const localUrl = URL.createObjectURL(file)
   emit('update:modelValue', localUrl)
 

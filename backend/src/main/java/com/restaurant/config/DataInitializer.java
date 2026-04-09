@@ -15,6 +15,18 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 
+/**
+ * Seeds the database with default accounts and sample menu data on application startup.
+ *
+ * Default accounts created (only if they don't already exist):
+ * - admin / Admin123!  (ADMIN role)
+ * - staff / Staff123!  (STAFF role)
+ *
+ * Sample menu data (4 categories + 12 items) is created only if the categories table is empty,
+ * so it won't overwrite data added through the admin panel after first run.
+ *
+ * All prices are in Indonesian Rupiah (IDR).
+ */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -31,6 +43,7 @@ public class DataInitializer implements CommandLineRunner {
         createSampleData();
     }
 
+    /** Creates admin and staff accounts if they don't exist yet. */
     private void createDefaultUsers() {
         if (!userRepository.existsByUsername("admin")) {
             userRepository.save(User.builder()
@@ -57,6 +70,7 @@ public class DataInitializer implements CommandLineRunner {
         }
     }
 
+    /** Seeds 4 categories and 12 menu items; skipped if any categories already exist. */
     private void createSampleData() {
         if (categoryRepository.count() > 0) return;
 

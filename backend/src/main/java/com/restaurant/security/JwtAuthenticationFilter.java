@@ -15,6 +15,21 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
+/**
+ * Servlet filter that runs once per request and sets up Spring Security authentication
+ * from a JWT token in the Authorization header.
+ *
+ * Flow:
+ * 1. Extract the "Bearer <token>" value from the Authorization header.
+ * 2. Parse the username from the token.
+ * 3. Load the user from the database.
+ * 4. Validate the token (signature + expiry).
+ * 5. If valid, set the authentication in the SecurityContext.
+ *
+ * If the header is missing, malformed, or the token is invalid, the filter
+ * passes the request through without setting authentication (the request will
+ * fail authorization downstream if the endpoint requires it).
+ */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -30,16 +45,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         final String authHeader = request.getHeader("Authorization");
 
+        // Skip if no Bearer token is present — public endpoints will still work
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
 
+        // Strip "Bearer " prefix to get the raw token
         final String token = authHeader.substring(7);
 
         try {
             final String email = jwtUtil.extractUsername(token);
 
+            // Only authenticate if not already authenticated (avoids redundant DB calls)
             if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 UserDetails userDetails = userDetailsService.loadUserByUsername(email);
 
@@ -51,6 +69,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 }
             }
         } catch (Exception ex) {
+            // Log the issue but let the request continue — downstream auth will reject it if needed
             log.warn("Invalid JWT token: {}", ex.getMessage());
         }
 

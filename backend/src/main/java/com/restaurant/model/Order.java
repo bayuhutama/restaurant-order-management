@@ -9,6 +9,19 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * A single customer order in the dine-in restaurant system.
+ *
+ * Orders can be placed by:
+ * - A registered User (user field is set; guest fields are null)
+ * - A guest (user is null; guestName/guestPhone/guestEmail are used instead)
+ *
+ * Every order belongs to a TableSession that groups all orders at one table
+ * during a visit. The order also denormalises tableNumber for quick lookups.
+ *
+ * Lifecycle: PENDING → CONFIRMED → PREPARING → READY → DELIVERED
+ * See OrderStatus for detailed rules.
+ */
 @Entity
 @Table(name = "orders")
 @Data
@@ -21,12 +34,16 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /** Human-readable unique reference in the format ORD-YYYYMMDD-XXXXXX. */
     @Column(name = "order_number", nullable = false, unique = true)
     private String orderNumber;
 
+    /** Set for registered users; null for guest orders. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
+
+    // Guest identity fields — used when user is null
 
     @Column(name = "guest_name")
     private String guestName;
@@ -37,31 +54,40 @@ public class Order {
     @Column(name = "guest_email")
     private String guestEmail;
 
+    /** Line items; cascaded so saving the order also saves its items. */
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<OrderItem> items;
 
+    /** Current order lifecycle state. */
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private OrderStatus status;
 
+    /** Optional overall notes for the entire order (e.g. "allergy: nuts"). */
     private String notes;
 
+    /** Physical table number this order is associated with. */
     @Column(name = "table_number")
     private String tableNumber;
 
+    /** Pre-calculated sum of all line item subtotals (quantity × unit_price). */
     @Column(name = "total_amount", nullable = false)
     private BigDecimal totalAmount;
 
+    /** Associated payment record; cascaded so it is deleted with the order. */
     @OneToOne(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private Payment payment;
 
+    /** The table session this order belongs to. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "table_session_id")
     private TableSession tableSession;
 
+    /** Set once on insert. */
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
+    /** Updated on every status change. */
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 

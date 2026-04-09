@@ -9,6 +9,11 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * Public read-only endpoints for browsing the menu.
+ * No authentication is required — customers and guests can both access these.
+ * Write operations (create/update/delete) are in AdminController.
+ */
 @RestController
 @RequiredArgsConstructor
 public class MenuController {
@@ -29,6 +34,11 @@ public class MenuController {
 
     // ── Menu Items (public) ──────────────────────────────────────────────────
 
+    /**
+     * Returns menu items with optional filters.
+     * @param categoryId  filter to a specific category (null = all categories)
+     * @param available   when true, only returns items that are currently orderable
+     */
     @GetMapping("/api/menu")
     public ResponseEntity<List<MenuItemResponse>> getMenuItems(
             @RequestParam(required = false) Long categoryId,

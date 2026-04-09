@@ -189,6 +189,20 @@
 </template>
 
 <script setup>
+/**
+ * Table bill page — shows the combined bill for all orders at the table
+ * and allows the customer to settle the whole session in one payment.
+ *
+ * Accessed via /table/:tableNumber/bill (linked from the running bill banner
+ * on HomeView and from admin-generated QR codes if applicable).
+ *
+ * Payment methods:
+ * - CASH: submits immediately; cashier collects payment offline
+ * - CARD: requires Luhn-validated card details (cosmetic validation only)
+ *
+ * On success, the session is marked PAID on the server and the page shows
+ * a "Payment complete" confirmation screen.
+ */
 import { ref, onMounted } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import { tableSessionApi } from '@/api'

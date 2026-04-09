@@ -13,6 +13,11 @@
 </template>
 
 <script setup>
+/**
+ * Reusable modal dialog for admin CRUD forms.
+ * Clicking the backdrop or the × button emits 'close'.
+ * Content is rendered in the default slot — typically a form.
+ */
 defineProps({ title: { type: String, default: '' } })
 defineEmits(['close'])
 </script>

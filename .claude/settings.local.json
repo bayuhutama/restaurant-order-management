@@ -55,7 +55,8 @@
       "Bash(npm uninstall:*)",
       "Bash(npm run:*)",
       "Bash(./mvnw clean:*)",
-      "Bash(cmd /c \"mvnw.cmd clean package -q -DskipTests\")"
+      "Bash(cmd /c \"mvnw.cmd clean package -q -DskipTests\")",
+      "Bash(xargs cat:*)"
     ]
   }
 }

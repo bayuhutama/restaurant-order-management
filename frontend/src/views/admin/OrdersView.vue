@@ -88,6 +88,12 @@
 </template>
 
 <script setup>
+/**
+ * Admin orders view — full order list including AWAITING_PAYMENT (hidden from staff).
+ * Admins can set any status including CANCELLED via the inline status dropdown.
+ * Search filters by order number, customer name, phone, or table number (client-side).
+ * Manual refresh button reloads the list from the server.
+ */
 import { ref, computed, onMounted } from 'vue'
 import { adminOrderApi } from '@/api'
 import { formatRupiah } from '@/utils/format'
@@ -100,6 +106,7 @@ const loading = ref(true)
 const searchQuery = ref('')
 const { showAlert } = useDialog()
 
+/** Client-side filter by order number, customer name, phone, or table number. */
 const filteredOrders = computed(() => {
   if (!searchQuery.value.trim()) return orders.value
   const q = searchQuery.value.trim().toLowerCase()

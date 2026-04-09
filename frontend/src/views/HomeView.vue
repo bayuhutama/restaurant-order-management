@@ -91,6 +91,17 @@
 </template>
 
 <script setup>
+/**
+ * Customer home page — shows the menu and handles QR code table assignment.
+ *
+ * On mount:
+ * 1. Reads ?table=N from the URL (set by QR code scan) and stores it in tableStore.
+ * 2. Loads the active table session to show the running bill banner.
+ * 3. Fetches categories and available menu items.
+ *
+ * Running bill banner: shown when the table has a session with at least one unpaid order.
+ * Search: client-side filter by name or description, combined with the category filter.
+ */
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute, RouterLink } from 'vue-router'
 import { menuApi, tableSessionApi } from '@/api'
@@ -109,10 +120,12 @@ const loading = ref(true)
 const activeSession = ref(null)
 const searchQuery = ref('')
 
+/** True if the table session has any order where payment is still pending. */
 const hasUnpaidOrders = computed(() =>
   activeSession.value?.orders?.some(o => o.payment?.status !== 'PAID') ?? false
 )
 
+/** Applies category and search filters to the available menu items. */
 const filteredItems = computed(() => {
   let items = menuItems.value.filter(i => i.available)
   if (selectedCategory.value) {

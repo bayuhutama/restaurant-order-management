@@ -57,6 +57,13 @@
 </template>
 
 <script setup>
+/**
+ * Admin category management page.
+ * Supports creating, editing, and deleting categories.
+ * Uses a shared Modal component for the create/edit form.
+ * Images are uploaded via ImageUpload (drag & drop, file picker, or URL paste).
+ * Deletion requires confirmation via useDialog to prevent accidental data loss.
+ */
 import { ref, onMounted } from 'vue'
 import { menuApi, adminCategoryApi } from '@/api'
 import Modal from '@/components/Modal.vue'
@@ -67,7 +74,7 @@ const categories = ref([])
 const { showConfirm, showAlert } = useDialog()
 const loading = ref(true)
 const showModal = ref(false)
-const editing = ref(null)
+const editing = ref(null)   // holds the ID of the category being edited; null = creating new
 const saving = ref(false)
 const error = ref('')
 const form = ref({ name: '', description: '', imageUrl: '' })

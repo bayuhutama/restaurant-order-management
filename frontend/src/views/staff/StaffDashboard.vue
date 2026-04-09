@@ -201,6 +201,24 @@
 </template>
 
 <script setup>
+/**
+ * Staff dashboard — the main working view for kitchen/service staff.
+ *
+ * Sections:
+ * 1. Active Tables strip: horizontal-scrolling cards showing OPEN sessions
+ *    with order count, total, and an "End Session" button.
+ * 2. Status tabs: Active | Pending | Confirmed | Preparing | Ready | All
+ *    Each tab shows a live count badge. "Active" combines all in-progress statuses.
+ * 3. Order cards: color-coded by status with a full-width action button to
+ *    advance to the next stage. PENDING orders with unpaid payment show
+ *    "Awaiting payment" instead of an action button.
+ *
+ * Real-time: subscribes to /topic/orders via WebSocket.
+ * On each update, the order list is refreshed in-place and sessions are reloaded
+ * (new orders may have created a new session).
+ *
+ * Search: client-side filter by order number, customer name, phone, or table number.
+ */
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDialog } from '@/composables/useDialog'
@@ -222,11 +240,11 @@ function handleLogout() {
 
 const orders = ref([])
 const loading = ref(true)
-const updating = ref(null)
+const updating = ref(null)       // holds the ID of the order currently being updated
 const wsConnected = ref(false)
 const searchQuery = ref('')
 const openSessions = ref([])
-const closingTable = ref(null)
+const closingTable = ref(null)   // holds the table number whose session is being closed
 const activeTab = ref('ACTIVE')
 
 // ── Status tabs ────────────────────────────────────────────────────────────────
@@ -288,6 +306,7 @@ const statusTabs = computed(() => [
   },
 ])
 
+/** Applies the active tab filter and search query to the full orders list. */
 const displayedOrders = computed(() => {
   let result = orders.value
 
@@ -345,6 +364,7 @@ function formatTime(dt) {
   return new Date(dt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
+/** Returns a human-readable elapsed time string (e.g. "5m ago", "1h ago"). */
 function timeAgo(dt) {
   const mins = Math.floor((Date.now() - new Date(dt)) / 60000)
   if (mins < 1) return 'just now'
@@ -408,14 +428,16 @@ onMounted(() => {
 
   connect((client) => {
     wsConnected.value = true
+    // Subscribe to all order updates — update existing orders in-place or prepend new ones
     client.subscribe('/topic/orders', (message) => {
       const updated = JSON.parse(message.body)
       const idx = orders.value.findIndex(o => o.id === updated.id)
       if (idx !== -1) {
-        orders.value[idx] = updated
+        orders.value[idx] = updated  // update existing order card
       } else {
-        orders.value.unshift(updated)
+        orders.value.unshift(updated)  // prepend new order
       }
+      // Reload sessions in case a new order opened a new table session
       loadSessions()
     })
   })

@@ -6,10 +6,20 @@
 </template>
 
 <script setup>
+/**
+ * Colored pill badge that represents an order status.
+ * Each status has its own color scheme, label, and optional pulsing dot
+ * to draw attention to active/in-progress states.
+ *
+ * Dark mode class strings are written in full (not constructed dynamically)
+ * so Tailwind's content scanner can detect and include them in the build.
+ */
 import { computed } from 'vue'
 
 const props = defineProps({ status: String })
 
+// Config map: each status defines its Tailwind color classes, dot color,
+// display label, and whether the dot should animate (active states).
 const configs = {
   AWAITING_PAYMENT: { color: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300', dot: 'bg-orange-500', label: 'Awaiting Payment', pulse: true  },
   PENDING:          { color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300', dot: 'bg-yellow-500', label: 'Order Received',    pulse: true  },

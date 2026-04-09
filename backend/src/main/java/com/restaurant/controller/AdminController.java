@@ -15,6 +15,11 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * Admin-only endpoints for managing menu content and orders.
+ * All routes require the ADMIN role (enforced by @PreAuthorize at class level).
+ * Staff use StaffController for order status updates; admins can also cancel orders here.
+ */
 @RestController
 @RequestMapping("/api/admin")
 @RequiredArgsConstructor
@@ -37,6 +42,7 @@ public class AdminController {
         return ResponseEntity.ok(menuService.updateCategory(id, request));
     }
 
+    /** Deletes a category. Note: menu items linked to it will lose their category. */
     @DeleteMapping("/categories/{id}")
     public ResponseEntity<Void> deleteCategory(@PathVariable Long id) {
         menuService.deleteCategory(id);
@@ -62,6 +68,7 @@ public class AdminController {
         return ResponseEntity.noContent().build();
     }
 
+    /** Flips the item's available flag between true and false. */
     @PatchMapping("/menu/{id}/availability")
     public ResponseEntity<MenuItemResponse> toggleAvailability(@PathVariable Long id) {
         return ResponseEntity.ok(menuService.toggleAvailability(id));
@@ -69,11 +76,13 @@ public class AdminController {
 
     // ── Orders ───────────────────────────────────────────────────────────────
 
+    /** Returns all orders including AWAITING_PAYMENT — visible only to admins. */
     @GetMapping("/orders")
     public ResponseEntity<List<OrderResponse>> getAllOrders() {
         return ResponseEntity.ok(orderService.getAllOrders());
     }
 
+    /** Allows admins to set any status, including CANCELLED. */
     @PatchMapping("/orders/{id}/status")
     public ResponseEntity<OrderResponse> updateOrderStatus(
             @PathVariable Long id,

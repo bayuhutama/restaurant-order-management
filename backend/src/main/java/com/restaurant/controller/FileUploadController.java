@@ -10,6 +10,14 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.Map;
 
+/**
+ * Admin-only endpoint for uploading menu item and category images.
+ * Uploaded files are saved to the local filesystem under the configured
+ * upload directory and served as static resources via /uploads/**.
+ *
+ * FileUploadService validates both the declared content-type and the
+ * actual file magic bytes to prevent spoofed uploads.
+ */
 @RestController
 @RequestMapping("/api/admin/upload")
 @RequiredArgsConstructor
@@ -18,6 +26,11 @@ public class FileUploadController {
 
     private final FileUploadService fileUploadService;
 
+    /**
+     * Accepts a multipart image file and returns its public URL.
+     * Responds with 400 if the file is empty or not an allowed image type.
+     * Responds with 500 if the file cannot be written to disk.
+     */
     @PostMapping
     public ResponseEntity<Map<String, String>> upload(@RequestParam("file") MultipartFile file) {
         if (file.isEmpty()) {

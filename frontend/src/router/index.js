@@ -1,6 +1,17 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
+/**
+ * Application router.
+ *
+ * Route groups:
+ * - Customer routes: public, no auth required. QR code scanning sets ?table=N on HomeView.
+ * - Staff routes:    require STAFF or ADMIN role; redirect to /staff/login if not authenticated.
+ * - Admin routes:    require ADMIN role; redirect to /admin/login if not authenticated.
+ *
+ * All protected routes use meta.requiresRole to declare the required role.
+ * The beforeEach guard checks authentication and role before every navigation.
+ */
 const router = createRouter({
   history: createWebHistory(),
   routes: [
@@ -38,6 +49,11 @@ const router = createRouter({
   ]
 })
 
+/**
+ * Navigation guard — enforces role-based access on every route change.
+ * Unauthenticated users are sent to the appropriate login page.
+ * Authenticated users with the wrong role are also redirected to login.
+ */
 router.beforeEach((to, from, next) => {
   const auth = useAuthStore()
 
