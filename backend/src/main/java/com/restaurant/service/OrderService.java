@@ -24,6 +24,18 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+/**
+ * Core business logic for order placement, payment confirmation, and status management.
+ *
+ * WebSocket broadcasts are sent to three topics after every mutating operation:
+ *   /topic/orders               — staff dashboard (receives all updates)
+ *   /topic/orders/{number}      — individual customer order tracking page
+ *   /topic/table/{tableNumber}  — all customers at the same table (enables real-time
+ *                                  synchronization of the shared "My Orders" view)
+ *
+ * Circular dependency note: OrderService ↔ TableSessionService.
+ * TableSessionService is injected via @Lazy setter injection to break the cycle.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -36,6 +48,7 @@ public class OrderService {
     private final PaymentRepository paymentRepository;
     private final SimpMessagingTemplate messagingTemplate;
 
+    // Injected lazily to break the circular dependency with TableSessionService
     private TableSessionService tableSessionService;
 
     @Autowired
@@ -52,6 +65,7 @@ public class OrderService {
         List<OrderItem> items = new ArrayList<>();
         BigDecimal total = BigDecimal.ZERO;
 
+        // Validate all items exist and are available, then build line items
         for (OrderItemRequest itemReq : request.items()) {
             MenuItem menuItem = menuItemRepository.findById(itemReq.menuItemId())
                     .orElseThrow(() -> new RuntimeException("Menu item not found: " + itemReq.menuItemId()));
@@ -63,7 +77,7 @@ public class OrderService {
             OrderItem orderItem = OrderItem.builder()
                     .menuItem(menuItem)
                     .quantity(itemReq.quantity())
-                    .unitPrice(menuItem.getPrice())
+                    .unitPrice(menuItem.getPrice())  // snapshot price at order time
                     .notes(itemReq.notes())
                     .build();
 
@@ -71,7 +85,7 @@ public class OrderService {
             total = total.add(menuItem.getPrice().multiply(BigDecimal.valueOf(itemReq.quantity())));
         }
 
-        // Associate with table session
+        // Associate with table session (creates one if none is currently OPEN)
         TableSession session = tableSessionService.getOrCreateSession(request.tableNumber());
 
         Order order = Order.builder()
@@ -89,12 +103,14 @@ public class OrderService {
 
         Order savedOrder = orderRepository.save(order);
 
+        // Link items to the saved order and persist them
         for (OrderItem item : items) {
             item.setOrder(savedOrder);
         }
         List<OrderItem> savedItems = orderItemRepository.saveAll(items);
         savedOrder.setItems(savedItems);
 
+        // Create the payment record in PENDING state
         Payment payment = Payment.builder()
                 .order(savedOrder)
                 .method(request.paymentMethod())
@@ -105,15 +121,15 @@ public class OrderService {
         Payment savedPayment = paymentRepository.save(payment);
         savedOrder.setPayment(savedPayment);
 
+        // Update session's lastActivityAt so the inactivity timer resets
         tableSessionService.touchSession(session);
 
         log.info("Order placed: orderNumber={}, table={}, items={}, total={}",
                 savedOrder.getOrderNumber(), request.tableNumber(), items.size(), total);
 
         OrderResponse response = mapToResponse(savedOrder);
-        // Notify staff immediately — no pre-payment required
-        messagingTemplate.convertAndSend("/topic/orders", response);
-        messagingTemplate.convertAndSend("/topic/orders/" + savedOrder.getOrderNumber(), response);
+        // Notify staff immediately — no pre-payment required to show on dashboard
+        broadcast(response);
 
         return response;
     }
@@ -121,6 +137,7 @@ public class OrderService {
     /**
      * Customer confirms payment on the payment page.
      * Marks the payment as PAID and notifies staff via WebSocket.
+     * Uses pessimistic locking to prevent double-payment race conditions.
      */
     @Transactional
     public OrderResponse confirmPayment(String orderNumber) {
@@ -147,9 +164,7 @@ public class OrderService {
         log.info("Payment confirmed: orderNumber={}, txnId={}", saved.getOrderNumber(), payment.getTransactionId());
 
         OrderResponse response = mapToResponse(saved);
-
-        messagingTemplate.convertAndSend("/topic/orders", response);
-        messagingTemplate.convertAndSend("/topic/orders/" + saved.getOrderNumber(), response);
+        broadcast(response);
 
         return response;
     }
@@ -171,14 +186,14 @@ public class OrderService {
                 .stream().map(this::mapToResponse).toList();
     }
 
-    /** Orders visible to staff — excludes AWAITING_PAYMENT. */
+    /** Orders visible to staff — excludes AWAITING_PAYMENT (legacy status). */
     public List<OrderResponse> getStaffOrders() {
         return orderRepository.findByStatusNotInOrderByCreatedAtDesc(
                         List.of(OrderStatus.AWAITING_PAYMENT))
                 .stream().map(this::mapToResponse).toList();
     }
 
-    /** Active orders for staff dashboard (in-progress only). */
+    /** Active orders for staff dashboard (in-progress only — not delivered or cancelled). */
     public List<OrderResponse> getActiveOrders() {
         List<OrderStatus> activeStatuses = List.of(
                 OrderStatus.PENDING, OrderStatus.CONFIRMED,
@@ -188,6 +203,10 @@ public class OrderService {
                 .stream().map(this::mapToResponse).toList();
     }
 
+    /**
+     * Allowed status transitions for each order state.
+     * Any transition not listed here will throw an exception.
+     */
     private static final Map<OrderStatus, Set<OrderStatus>> VALID_TRANSITIONS = Map.of(
             OrderStatus.PENDING,    Set.of(OrderStatus.CONFIRMED, OrderStatus.CANCELLED),
             OrderStatus.CONFIRMED,  Set.of(OrderStatus.PREPARING, OrderStatus.CANCELLED),
@@ -200,9 +219,12 @@ public class OrderService {
 
     @Transactional
     public OrderResponse updateOrderStatus(Long id, OrderStatus newStatus) {
-        Order order = orderRepository.findById(id)
+        // Pessimistic write lock prevents two concurrent status-advance requests from
+        // both reading the same current status and racing through the transition check.
+        Order order = orderRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
 
+        // Validate the requested transition is legal
         Set<OrderStatus> allowed = VALID_TRANSITIONS.getOrDefault(order.getStatus(), Set.of());
         if (!allowed.contains(newStatus)) {
             throw new RuntimeException(
@@ -220,7 +242,7 @@ public class OrderService {
         log.info("Order status updated: id={}, {} -> {}", id, order.getStatus(), newStatus);
         order.setStatus(newStatus);
 
-        // Auto-mark cash payment as paid when delivered
+        // Auto-mark cash payment as paid when the order is delivered
         if (newStatus == OrderStatus.DELIVERED && order.getPayment() != null
                 && order.getPayment().getMethod() == PaymentMethod.CASH
                 && order.getPayment().getStatus() == PaymentStatus.PENDING) {
@@ -231,15 +253,32 @@ public class OrderService {
 
         Order saved = orderRepository.save(order);
         OrderResponse response = mapToResponse(saved);
-
-        messagingTemplate.convertAndSend("/topic/orders", response);
-        messagingTemplate.convertAndSend("/topic/orders/" + saved.getOrderNumber(), response);
+        broadcast(response);
 
         return response;
     }
 
+    // ── Helpers ──────────────────────────────────────────────────────────────
+
+    /**
+     * Broadcasts an order update to all three relevant WebSocket topics:
+     *   - /topic/orders              — staff dashboard
+     *   - /topic/orders/{number}     — the individual customer's tracking page
+     *   - /topic/table/{tableNumber} — all customers at the same table (shared view sync)
+     */
+    private void broadcast(OrderResponse response) {
+        messagingTemplate.convertAndSend("/topic/orders", response);
+        messagingTemplate.convertAndSend("/topic/orders/" + response.orderNumber(), response);
+        messagingTemplate.convertAndSend("/topic/table/" + response.tableNumber(), response);
+    }
+
     // ── Mapper ───────────────────────────────────────────────────────────────
 
+    /**
+     * Maps an Order entity to its response DTO.
+     * Resolves customer identity: prefers User fields, falls back to guest fields.
+     * Public so StaffController can call it directly for single-order lookups.
+     */
     public OrderResponse mapToResponse(Order order) {
         List<OrderItem> items = order.getItems() != null ? order.getItems() : List.of();
 
@@ -263,6 +302,7 @@ public class OrderService {
                     p.getAmount(), p.getTransactionId(), p.getPaidAt());
         }
 
+        // Prefer registered user data; fall back to guest fields for unauthenticated orders
         String customerName  = order.getUser() != null ? order.getUser().getName()  : order.getGuestName();
         String customerPhone = order.getUser() != null ? order.getUser().getPhone() : order.getGuestPhone();
         String customerEmail = order.getUser() != null ? order.getUser().getEmail() : order.getGuestEmail();
@@ -277,6 +317,10 @@ public class OrderService {
         );
     }
 
+    /**
+     * Generates a human-readable order number in the format ORD-YYYYMMDD-XXXXXX.
+     * The random suffix reduces collisions under concurrent load.
+     */
     private String generateOrderNumber() {
         String date = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
         String random = UUID.randomUUID().toString().substring(0, 6).toUpperCase();

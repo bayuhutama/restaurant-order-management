@@ -11,6 +11,16 @@ Full-stack **dine-in** restaurant order management system (brand name: **Savoria
 
 This is a **dine-in only** restaurant system — no delivery, no takeaway. Customers sit at a table, scan a QR code, place orders, and food is brought to the table by staff.
 
+## Code Style
+
+### Comments
+
+Every source file must have explanatory comments. Apply this to all new and modified code:
+
+- **Backend (Java):** Every class must have a Javadoc `/** ... */` comment explaining its role in the system. Every public method must have a Javadoc comment describing what it does, its parameters, and any important side-effects (e.g. WebSocket broadcasts, transactions, locking). Non-obvious fields must have inline comments. Enum values must have comments explaining their lifecycle meaning.
+- **Frontend (Vue/JS):** Every component `<script setup>` block must open with a JSDoc `/** ... */` comment explaining the component's purpose. Non-trivial functions, computed properties, and watchers must have a comment explaining what they do and why. Store files must document each piece of state and action.
+- **Don't comment the obvious** (`// increment counter` above `i++`). Focus on *why* — business rules, concurrency rationale, security constraints, and non-obvious choices.
+
 ## Commands
 
 ### Backend
@@ -64,9 +74,13 @@ Orders are placed as `PENDING` immediately. Staff **cannot** advance an order fr
 
 - Endpoint: `/ws` with SockJS fallback.
 - Vite config requires `define: { global: 'globalThis' }` to fix `global is not defined` from sockjs-client.
-- Staff subscribes to `/topic/orders` — receives every order update.
-- Customers subscribe to `/topic/orders/{orderNumber}` — receives updates for their specific order.
-- Server pushes via `SimpMessagingTemplate` inside `OrderService.updateOrderStatus()` and `placeOrder()` and `confirmPayment()`.
+- Server pushes via `SimpMessagingTemplate` through the private `broadcast()` helper in `OrderService`, called from `placeOrder()`, `confirmPayment()`, and `updateOrderStatus()`.
+
+| Topic | Subscriber | Purpose |
+|---|---|---|
+| `/topic/orders` | Staff dashboard | Every order event across all tables |
+| `/topic/orders/{orderNumber}` | Customer order tracking page | Updates for one specific order |
+| `/topic/table/{tableNumber}` | Customer "My Orders" page | All events for a table — keeps every device at the same table in sync |
 
 ### Table Session Feature
 

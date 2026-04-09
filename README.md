@@ -211,13 +211,29 @@ src/
 ### Real-time (WebSocket)
 
 - Endpoint: `/ws` with SockJS fallback
-- Staff subscribes to `/topic/orders` — receives all order updates
-- Customers subscribe to `/topic/orders/{orderNumber}` — receives updates for their order
-- Server broadcasts via `SimpMessagingTemplate` on every order state change
+- Server broadcasts via `SimpMessagingTemplate` through a shared `broadcast()` helper in `OrderService`, called on every mutating operation
+
+| Topic | Subscriber | Purpose |
+|---|---|---|
+| `/topic/orders` | Staff dashboard | Every order event across all tables |
+| `/topic/orders/{orderNumber}` | Customer order tracking page | Updates for one specific order |
+| `/topic/table/{tableNumber}` | Customer "My Orders" page | All events for a table — keeps every device at the same table in sync |
 
 ### Table Sessions
 
 Each table has a `TableSession` that accumulates orders from multiple customers. Sessions expire automatically after 60 minutes of inactivity (configurable). Staff can also close a session manually.
+
+### Concurrency
+
+Pessimistic write locks (`SELECT ... FOR UPDATE`) are applied in any transaction where two concurrent requests could corrupt shared state:
+
+| Method | Lock | Reason |
+|---|---|---|
+| `OrderService.updateOrderStatus` | `findByIdForUpdate(id)` | Prevents two staff from racing on the same order's state transition |
+| `OrderService.confirmPayment` | `findByOrderNumberForUpdate(orderNumber)` | Prevents double-payment if two requests arrive simultaneously |
+| `TableSessionService.getOrCreateSession` | `findByTableNumberAndStatusForUpdate` | Prevents two simultaneous first-orders at the same table from opening duplicate sessions |
+| `TableSessionService.paySession` | `findByTableNumberAndStatusForUpdate` | Prevents concurrent pay requests from both reading OPEN and both writing PAID |
+| `TableSessionService.closeSession` | `findByTableNumberAndStatusForUpdate` | Prevents close racing with an in-flight order placement |
 
 ---
 

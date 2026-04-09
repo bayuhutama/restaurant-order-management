@@ -84,8 +84,26 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { orderApi, tableSessionApi } from '@/api'
+/**
+ * "My Orders" page — shows ALL orders placed at the current table, from any device.
+ *
+ * Three display states:
+ * 1. No table selected — prompt to scan QR or go to checkout
+ * 2. Table selected, no open session / no orders — empty state with Browse Menu link
+ * 3. Orders loaded — live list synchronized across all customers at the same table
+ *
+ * Data source: fetches all orders from the server-side TableSession on mount, so every
+ * device at the same table sees the same list regardless of who placed which order.
+ *
+ * Real-time sync: subscribes to /topic/table/{tableNumber}. The server broadcasts to
+ * this topic on every order event (new order placed, status change, payment confirmed).
+ * Incoming events are upserted — new orders are appended, existing ones are updated in place.
+ *
+ * Session check: a 404 from getSession means staff ended the session; stored orders and
+ * table assignment are cleared so the page resets cleanly.
+ */
+import { ref, onMounted } from 'vue'
+import { tableSessionApi } from '@/api'
 import { formatRupiah } from '@/utils/format'
 import { useOrdersStore } from '@/stores/orders'
 import { useTableStore } from '@/stores/table'
@@ -97,10 +115,6 @@ const ordersStore = useOrdersStore()
 const tableStore = useTableStore()
 const orders = ref([])
 const loading = ref(true)
-
-const orderNumbers = computed(() =>
-  tableStore.tableNumber ? ordersStore.getNumbersForTable(tableStore.tableNumber) : []
-)
 
 const ACTIVE_STATUSES = ['PENDING', 'CONFIRMED', 'PREPARING', 'READY']
 
@@ -128,49 +142,51 @@ function clearDelivered() {
   orders.value = orders.value.filter(o => !toRemove.includes(o.orderNumber))
 }
 
-const { connect } = useWebSocket()
-
 function clearTableSession() {
   ordersStore.getNumbersForTable(tableStore.tableNumber).forEach(n => ordersStore.removeOrder(n))
   tableStore.clearTable()
 }
 
+/**
+ * Upserts an incoming order event into the local list.
+ * If the order is already displayed (same orderNumber), update it in place.
+ * If it's new (e.g. placed by another customer at the same table), append it.
+ */
+function upsertOrder(updated) {
+  const idx = orders.value.findIndex(o => o.orderNumber === updated.orderNumber)
+  if (idx !== -1) {
+    orders.value[idx] = updated
+  } else {
+    orders.value.unshift(updated)
+  }
+}
+
+const { connect } = useWebSocket()
+
 async function loadOrders() {
   if (!tableStore.tableNumber) { loading.value = false; return }
 
-  // Only validate the session when there are stored orders for this table.
-  // If no orders exist yet (customer hasn't ordered), just show the empty state.
-  if (orderNumbers.value.length > 0) {
-    try {
-      await tableSessionApi.getSession(tableStore.tableNumber)
-    } catch {
-      // Session ended by staff — clear this table's history
-      clearTableSession()
-      loading.value = false
-      return
-    }
-  }
-
   loading.value = true
-  const results = await Promise.allSettled(
-    orderNumbers.value.map(n => orderApi.trackOrder(n))
-  )
-  orders.value = results
-    .filter(r => r.status === 'fulfilled')
-    .map(r => r.value.data)
-  loading.value = false
+  try {
+    // Fetch the full session — returns all orders at this table from all devices
+    const res = await tableSessionApi.getSession(tableStore.tableNumber)
+    orders.value = res.data.orders ?? []
+  } catch {
+    // 404 means session was ended by staff — clean up and reset
+    clearTableSession()
+  } finally {
+    loading.value = false
+  }
 }
 
 onMounted(() => {
   loadOrders()
 
   connect((client) => {
-    orderNumbers.value.forEach(orderNumber => {
-      client.subscribe(`/topic/orders/${orderNumber}`, (message) => {
-        const updated = JSON.parse(message.body)
-        const idx = orders.value.findIndex(o => o.orderNumber === updated.orderNumber)
-        if (idx !== -1) orders.value[idx] = updated
-      })
+    if (!tableStore.tableNumber) return
+    // Subscribe to the shared table topic so all devices stay in sync in real time
+    client.subscribe(`/topic/table/${tableStore.tableNumber}`, (message) => {
+      upsertOrder(JSON.parse(message.body))
     })
   })
 })
