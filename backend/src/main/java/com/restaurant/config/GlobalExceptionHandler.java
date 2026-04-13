@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -23,14 +24,59 @@ import java.util.Map;
 public class GlobalExceptionHandler {
 
     /**
-     * Catches all unhandled RuntimeExceptions (e.g. "Order not found", business rule violations).
-     * Returns 400 Bad Request with the exception message.
+     * Known business-rule messages that are safe to expose to clients.
+     * Any RuntimeException whose message does NOT start with one of these prefixes
+     * is treated as an unexpected internal error and masked with a generic message.
+     */
+    private static final List<String> SAFE_PREFIXES = List.of(
+            "Menu item not found",
+            "Menu item is not available",
+            "Order not found",
+            "Category not found",
+            "Payment record not found",
+            "Payment confirmation failed",
+            "Order has already been paid",
+            "Cannot transition order",
+            "Cannot confirm order",
+            "Cannot cancel",
+            "Username already exists",
+            "Category already exists",
+            "Table session not found",
+            "No open session",
+            "Session is not open",
+            "Orders cannot be cancelled"
+    );
+
+    /**
+     * Catches all unhandled RuntimeExceptions.
+     * <p>
+     * Business-rule violations (whose messages match known prefixes) are returned
+     * as 400 Bad Request with the original message so the frontend can display them.
+     * "Not found" messages return 404.
+     * All other RuntimeExceptions are logged with the full stack trace but the client
+     * receives only a generic "An unexpected error occurred" message with 500 status,
+     * preventing internal details (SQL errors, class names, etc.) from leaking.
      */
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, String>> handleRuntime(RuntimeException ex) {
-        log.error("RuntimeException: {}", ex.getMessage());
-        return ResponseEntity.badRequest()
-                .body(Map.of("message", ex.getMessage()));
+        String msg = ex.getMessage();
+        boolean safe = msg != null && SAFE_PREFIXES.stream().anyMatch(msg::startsWith);
+
+        if (safe) {
+            log.warn("Business rule violation: {}", msg);
+            // Return 404 for "not found" errors, 400 for other business rule violations
+            if (msg.contains("not found")) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("message", msg));
+            }
+            return ResponseEntity.badRequest()
+                    .body(Map.of("message", msg));
+        }
+
+        // Unexpected error — log full stack trace but mask the message for the client
+        log.error("Unexpected error", ex);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("message", "An unexpected error occurred"));
     }
 
     /**

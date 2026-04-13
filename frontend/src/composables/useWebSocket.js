@@ -24,10 +24,16 @@ export function useWebSocket() {
 
   /**
    * Opens the WebSocket connection.
+   * If a connection already exists (e.g. from a rapid remount), returns without
+   * creating a duplicate client — prevents orphaned connections and duplicate
+   * message handlers.
+   *
    * @param onConnected - callback invoked once the STOMP session is established;
    *                      receives the client instance so subscriptions can be set up.
    */
   function connect(onConnected) {
+    if (client.value) return  // already connected or connecting — avoid duplicates
+
     client.value = new Client({
       webSocketFactory: () => new SockJS('http://localhost:8080/ws'),
       reconnectDelay: 5000,  // retry after 5s on disconnect
@@ -54,7 +60,11 @@ export function useWebSocket() {
   function subscribe(destination, callback) {
     if (!client.value || !connected.value) return null
     const sub = client.value.subscribe(destination, (message) => {
-      callback(JSON.parse(message.body))
+      try {
+        callback(JSON.parse(message.body))
+      } catch (e) {
+        console.error(`Failed to parse WebSocket message on ${destination}:`, e)
+      }
     })
     subscriptions.push(sub)
     return sub
@@ -63,7 +73,12 @@ export function useWebSocket() {
   /** Unsubscribes from all active subscriptions and deactivates the client. */
   function disconnect() {
     subscriptions.forEach(sub => { try { sub.unsubscribe() } catch {} })
-    if (client.value) client.value.deactivate()
+    subscriptions.length = 0  // clear the array so stale refs don't accumulate
+    if (client.value) {
+      client.value.deactivate()
+      client.value = null  // allow connect() to create a new client if called again
+    }
+    connected.value = false
   }
 
   // Auto-disconnect when the component using this composable is destroyed

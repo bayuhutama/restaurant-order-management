@@ -53,16 +53,32 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @Query("SELECT o FROM Order o WHERE o.id = :id")
     Optional<Order> findByIdForUpdate(Long id);
 
-    /** Returns all orders for a registered customer, newest first. */
+    /**
+     * Returns all orders for a registered customer, newest first.
+     * EntityGraph avoids N+1 when mapToResponse() accesses items, payment, and user.
+     */
+    @EntityGraph(attributePaths = {"items", "payment", "user"})
     List<Order> findByUserIdOrderByCreatedAtDesc(Long userId);
 
-    /** Returns all orders in the system, newest first — used by the admin panel. */
+    /**
+     * Returns all orders in the system, newest first — used by the admin panel.
+     * EntityGraph avoids N+1 when mapToResponse() accesses items, payment, and user.
+     */
+    @EntityGraph(attributePaths = {"items", "payment", "user"})
     List<Order> findAllByOrderByCreatedAtDesc();
 
-    /** Returns orders whose status is in the given set, newest first. */
+    /**
+     * Returns orders whose status is in the given set, newest first.
+     * EntityGraph avoids N+1 when mapToResponse() accesses items, payment, and user.
+     */
+    @EntityGraph(attributePaths = {"items", "payment", "user"})
     List<Order> findByStatusInOrderByCreatedAtDesc(List<OrderStatus> statuses);
 
-    /** Returns orders whose status is NOT in the given set, newest first. */
+    /**
+     * Returns orders whose status is NOT in the given set, newest first.
+     * EntityGraph avoids N+1 when mapToResponse() accesses items, payment, and user.
+     */
+    @EntityGraph(attributePaths = {"items", "payment", "user"})
     List<Order> findByStatusNotInOrderByCreatedAtDesc(List<OrderStatus> statuses);
 
     /**

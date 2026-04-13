@@ -173,9 +173,11 @@ public class OrderService {
             throw new RuntimeException("Payment record not found");
         }
 
-        // Validate the token if one is stored (null means legacy order — skip check)
+        // Validate the token if one is stored (null means legacy order — skip check).
+        // Uses a generic error message to avoid confirming whether a token exists,
+        // which would help an attacker distinguish valid from invalid order numbers.
         if (payment.getPaymentToken() != null && !payment.getPaymentToken().equals(paymentToken)) {
-            throw new RuntimeException("Invalid payment token");
+            throw new RuntimeException("Payment confirmation failed");
         }
 
         if (payment.getStatus() == PaymentStatus.PAID) {

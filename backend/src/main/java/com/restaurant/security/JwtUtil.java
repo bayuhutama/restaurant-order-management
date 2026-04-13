@@ -67,11 +67,15 @@ public class JwtUtil {
         return getClaims(token).getExpiration().before(new Date());
     }
 
-    /** Parses and verifies the token signature, returning all claims. Throws on invalid tokens. */
+    /**
+     * Parses and verifies the token signature, returning all claims.
+     * Throws on invalid or expired tokens.
+     * verifyWith() constrains the algorithm to the key type (HMAC-SHA), so a
+     * separate requireAlgorithm() call is unnecessary in jjwt 0.12.x.
+     */
     private Claims getClaims(String token) {
         return Jwts.parser()
                 .verifyWith(getSigningKey())
-                .requireAlgorithm(ALGORITHM.getId())
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();

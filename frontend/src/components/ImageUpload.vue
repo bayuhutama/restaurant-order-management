@@ -156,10 +156,25 @@ async function upload(file) {
   }
 }
 
+/**
+ * Validates and applies the manually entered URL.
+ * Only http:// and https:// protocols are allowed to prevent javascript: URI
+ * injection and other non-HTTP schemes that could lead to XSS.
+ */
 function applyUrl() {
   const trimmed = urlDraft.value.trim()
+  if (!trimmed) {
+    // Empty string clears the image — always allowed
+    if (props.modelValue) emit('update:modelValue', '')
+    return
+  }
+  if (!/^https?:\/\//i.test(trimmed)) {
+    uploadError.value = 'URL must start with http:// or https://'
+    return
+  }
   if (trimmed !== props.modelValue) {
     imgError.value = false
+    uploadError.value = ''
     emit('update:modelValue', trimmed)
   }
 }

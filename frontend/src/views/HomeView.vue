@@ -102,7 +102,7 @@
  * Running bill banner: shown when the table has a session with at least one unpaid order.
  * Search: client-side filter by name or description, combined with the category filter.
  */
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute, RouterLink } from 'vue-router'
 import { menuApi, tableSessionApi } from '@/api'
 import { useTableStore } from '@/stores/table'
@@ -193,5 +193,9 @@ onMounted(() => {
     loadActiveSession(tableStore.tableNumber)
   }
   loadData()
+})
+
+onUnmounted(() => {
+  clearTimeout(_searchTimer)
 })
 </script>

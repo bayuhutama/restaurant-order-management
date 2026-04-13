@@ -126,12 +126,12 @@ Multiple customers at the same table place individual orders that accumulate und
 - **`stores/cart.js`** — Cart state, persisted to `localStorage`.
 - **`stores/table.js`** — `tableNumber` in `sessionStorage` (clears on tab close). `setTable(n)` / `clearTable()`.
 - **`stores/orders.js`** — Persists `[{ orderNumber, tableNumber, paymentToken }]` to `localStorage`. `addOrder(orderNumber, tableNumber, paymentToken)`, `getNumbersForTable(tableNumber)`, `removeOrder(orderNumber)`, `getTokenForOrder(orderNumber)`. Scopes order history to the current table. Token is stored here so `PaymentView` can retrieve it without a server round-trip.
-- **`composables/useWebSocket.js`** — Wraps `@stomp/stompjs` Client. Auto-disconnects on unmount.
+- **`composables/useWebSocket.js`** — Wraps `@stomp/stompjs` Client. Auto-disconnects on unmount. Guards against duplicate clients on rapid remounts (`connect()` is a no-op if a client already exists). `subscribe()` wraps `JSON.parse` in try/catch. Views that use `client.subscribe()` directly (in the `onConnected` callback) must also wrap `JSON.parse` in try/catch.
 - **`composables/useDialog.js`** — Module-level singleton for custom alert/confirm dialogs. Returns promises. `showAlert(message, title)` and `showConfirm(message, title, variant)`. Replaces all native `alert()`/`confirm()` calls.
 - **`components/AppDialog.vue`** — The dialog UI. Mounted in `App.vue` via `<Teleport to="body">`. Reads from `useDialog` state. Two variants: `alert` (OK button) and `confirm` (Cancel + Confirm). `danger` variant uses red styling.
 - **`components/Modal.vue`** — Reusable modal for admin CRUD forms.
 - **`components/OrderStatusBadge.vue`** — Colored badge. Dark mode class strings written in full in the config object so Tailwind scanner picks them up.
-- **`components/ImageUpload.vue`** — Drag & drop / click / URL paste image uploader. v-model compatible.
+- **`components/ImageUpload.vue`** — Drag & drop / click / URL paste image uploader. v-model compatible. URL input validates protocol (only `http://` and `https://` allowed — blocks `javascript:`, `data:`, and other dangerous schemes).
 - **`components/MenuCard.vue`** — Equal-height cards. Description uses `line-clamp-2` with CSS tooltip on hover.
 - **`router/index.js`** — Route guards. Includes `/my-orders`, `/payment/:orderNumber`, `/table/:tableNumber/bill`.
 - **`views/PaymentView.vue`** — Three payment tabs: QR Code (generated with `qrcode` library from order ref), Card (Luhn validation), Cash at Cashier. Retrieves `paymentToken` from `ordersStore` and sends it in the confirm request body. Redirects to `/my-orders` after confirmation.
@@ -186,7 +186,7 @@ Client-side `computed` filtering (reactive, no network calls):
 #### Backend
 - `spring.jpa.properties.hibernate.default_batch_fetch_size=30` — lazy collections (e.g. `Order.items`, `TableSession.orders`) are loaded in batches of up to 30 with `IN (...)` queries instead of one query per entity (eliminates most N+1 patterns on list endpoints).
 - `@EntityGraph(attributePaths = {"category"})` on all `MenuItemRepository` finders — JOIN FETCHes the `Category` association so `mapMenuItem()` doesn't trigger a separate query per item.
-- `@EntityGraph(attributePaths = {"items", "payment", "user"})` on `OrderRepository.findByOrderNumber` and `findByTableSessionId` — used by `mapToResponse()` to avoid N+1 on single-order and session-order lookups.
+- `@EntityGraph(attributePaths = {"items", "payment", "user"})` on **all** `OrderRepository` finders that drive `mapToResponse()` — `findByOrderNumber`, `findByTableSessionId`, `findAllByOrderByCreatedAtDesc`, `findByUserIdOrderByCreatedAtDesc`, `findByStatusInOrderByCreatedAtDesc`, `findByStatusNotInOrderByCreatedAtDesc`. The locking queries (`findByOrderNumberForUpdate`, `findByIdForUpdate`) intentionally omit EntityGraph to avoid interference with row-level lock scope.
 - `@Index` on `Order`: composite `(status, created_at)`, `table_number`, `table_session_id`.
 - `@Index` on `TableSession`: composite `(table_number, status)` (hot path for `getOrCreateSession`), `status`.
 
@@ -216,6 +216,28 @@ All DTOs use `@Valid`. Key constraints: username 3–50 chars, password ≥8 cha
 | Staff | staff    | Staff123!  |
 
 Seeding only runs if the user doesn't exist (`existsByUsername`). Prices are in Indonesian Rupiah (IDR).
+
+### Error Handling
+
+#### Backend — `GlobalExceptionHandler`
+- **Business-rule violations** (messages matching a known safe-prefix allowlist) are returned to the client as-is with 400 Bad Request. "Not found" errors return 404.
+- **Unexpected RuntimeExceptions** (SQL errors, null pointers, etc.) are logged with full stack traces but the client receives only `"An unexpected error occurred"` with 500 status. This prevents internal details from leaking.
+- `BadCredentialsException` → 401, generic message (prevents username enumeration).
+- `AccessDeniedException` → 403, generic message.
+- `MethodArgumentNotValidException` → 400 with field-level error map.
+
+#### Backend — File Upload Security (`FileUploadService`)
+- Declared content-type must be an allowed image MIME type.
+- Actual file magic bytes are inspected (JPEG/PNG/GIF/WebP signatures) to prevent content-type spoofing.
+- The InputStream used for magic-byte detection is closed via try-with-resources to avoid file descriptor leaks.
+- Saved filename is a random UUID — user-supplied name is never used.
+- Resolved target path is verified to stay inside `uploadDir` (path traversal guard).
+
+#### Frontend — WebSocket Resilience
+- `useWebSocket.connect()` guards against duplicate clients on rapid remounts.
+- `useWebSocket.subscribe()` wraps `JSON.parse` in try/catch so malformed messages don't crash handlers.
+- All direct `client.subscribe()` calls in views (StaffDashboard, MyOrdersView, OrderTrackingView) also include JSON.parse error handling.
+- `disconnect()` resets `client.value` to null and clears the subscriptions array, allowing clean reconnection.
 
 ### Order Status Flow
 

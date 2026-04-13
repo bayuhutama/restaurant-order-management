@@ -81,7 +81,7 @@ public class StaffController {
             @PathVariable Long id,
             @Valid @RequestBody UpdateStatusRequest request) {
         if (request.status() == OrderStatus.CANCELLED) {
-            throw new RuntimeException("Orders cannot be cancelled once payment is confirmed");
+            throw new RuntimeException("Orders cannot be cancelled by staff — contact an admin");
         }
         return ResponseEntity.ok(orderService.updateOrderStatus(id, request.status()));
     }

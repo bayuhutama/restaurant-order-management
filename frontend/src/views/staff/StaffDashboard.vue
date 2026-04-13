@@ -468,7 +468,9 @@ onMounted(() => {
     wsConnected.value = true
     // Subscribe to all order updates — update existing orders in-place or prepend new ones
     client.subscribe('/topic/orders', (message) => {
-      const updated = JSON.parse(message.body)
+      let updated
+      try { updated = JSON.parse(message.body) }
+      catch (e) { console.error('Failed to parse order update:', e); return }
       const idx = orders.value.findIndex(o => o.id === updated.id)
       if (idx !== -1) {
         orders.value[idx] = updated  // update existing order card
@@ -489,5 +491,6 @@ onMounted(() => {
 
 onUnmounted(() => {
   clearInterval(_sessionPollInterval)
+  clearTimeout(_searchTimer)  // prevent dangling debounce timeout after unmount
 })
 </script>

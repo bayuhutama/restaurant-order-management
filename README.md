@@ -202,11 +202,33 @@ src/
 
 ### Security
 
-- JWT passed as `Authorization: Bearer <token>`, signed with HS256
+- JWT passed as `Authorization: Bearer <token>`, signed with HS256 (jjwt 0.12.x, `verifyWith()` constrains algorithm to key type)
 - Public endpoints: menu, order placement, order tracking, payment confirmation
 - Staff endpoints: require `ROLE_STAFF` or `ROLE_ADMIN`
 - Admin endpoints: require `ROLE_ADMIN`
 - Invalid tokens are rejected and logged as `WARN`
+
+### Error Handling
+
+`GlobalExceptionHandler` categorizes all exceptions:
+
+| Exception | HTTP Status | Client Message |
+|---|---|---|
+| Business-rule violations (known safe messages) | 400 Bad Request | Original message |
+| "Not found" business errors | 404 Not Found | Original message |
+| Authentication failures | 401 Unauthorized | Generic message (prevents enumeration) |
+| Authorization failures | 403 Forbidden | Generic message |
+| Validation errors (`@Valid`) | 400 Bad Request | Field-level error map |
+| Unexpected errors | 500 Internal Server Error | `"An unexpected error occurred"` (details logged server-side only) |
+
+### File Upload Security
+
+- Declared content-type must be an allowed image MIME type (JPEG, PNG, GIF, WebP)
+- Actual file content is verified via magic byte inspection — prevents content-type spoofing
+- File size capped at 10 MB
+- Saved filename is a random UUID — user-supplied name is never used
+- Target path is validated to stay inside the upload directory (path traversal guard)
+- InputStream used for magic-byte detection is properly closed via try-with-resources
 
 ### Real-time (WebSocket)
 

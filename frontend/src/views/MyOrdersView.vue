@@ -186,7 +186,8 @@ onMounted(() => {
     if (!tableStore.tableNumber) return
     // Subscribe to the shared table topic so all devices stay in sync in real time
     client.subscribe(`/topic/table/${tableStore.tableNumber}`, (message) => {
-      upsertOrder(JSON.parse(message.body))
+      try { upsertOrder(JSON.parse(message.body)) }
+      catch (e) { console.error('Failed to parse table order update:', e) }
     })
   })
 })

@@ -60,8 +60,13 @@ public class FileUploadService {
             throw new RuntimeException("File size must not exceed 10 MB");
         }
 
-        // Validate actual file content via magic bytes — prevents spoofed content-type
-        String detectedType = detectMimeType(file.getInputStream());
+        // Validate actual file content via magic bytes — prevents spoofed content-type.
+        // The stream is closed in a try-with-resources to avoid leaking file descriptors
+        // under sustained upload load.
+        String detectedType;
+        try (InputStream headerStream = file.getInputStream()) {
+            detectedType = detectMimeType(headerStream);
+        }
         if (!ALLOWED_TYPES.contains(detectedType)) {
             throw new RuntimeException("File content does not match an allowed image type");
         }

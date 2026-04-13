@@ -220,7 +220,8 @@ onMounted(() => {
   loadOrder()
   connect((client) => {
     client.subscribe(`/topic/orders/${route.params.orderNumber}`, (message) => {
-      order.value = JSON.parse(message.body)
+      try { order.value = JSON.parse(message.body) }
+      catch (e) { console.error('Failed to parse order tracking update:', e) }
     })
   })
 })
