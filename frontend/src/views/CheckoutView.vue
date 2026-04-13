@@ -179,7 +179,9 @@ async function submitOrder() {
     if (!tableStore.tableNumber) {
       tableStore.setTable(form.value.tableNumber.trim())
     }
-    ordersStore.addOrder(res.data.orderNumber, effectiveTable.value)
+    // Store the payment token alongside the order number so PaymentView can
+    // supply it when calling confirmPayment — the token is only in this response.
+    ordersStore.addOrder(res.data.orderNumber, effectiveTable.value, res.data.payment?.paymentToken)
     router.push(`/payment/${res.data.orderNumber}`)
   } catch (e) {
     error.value = e.response?.data?.message || 'Failed to place order. Please try again.'

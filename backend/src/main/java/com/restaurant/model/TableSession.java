@@ -20,7 +20,12 @@ import java.util.List;
  *  OPEN → EXPIRED (staff closes manually, or inactivity timeout triggers @Scheduled expiry)
  */
 @Entity
-@Table(name = "table_sessions")
+@Table(name = "table_sessions", indexes = {
+        // Composite index covers the hot path: find the OPEN session for a given table
+        @Index(name = "idx_table_sessions_table_number_status", columnList = "table_number, status"),
+        // status alone is used by the scheduler and getOpenSessions()
+        @Index(name = "idx_table_sessions_status", columnList = "status")
+})
 @Data
 @Builder
 @NoArgsConstructor

@@ -209,11 +209,13 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import QRCode from 'qrcode'
 import { orderApi } from '@/api'
+import { useOrdersStore } from '@/stores/orders'
 import { formatRupiah } from '@/utils/format'
 import { PhWarningCircle, PhCheckCircle, PhCreditCard, PhMoney, PhQrCode } from '@phosphor-icons/vue'
 
 const route = useRoute()
 const router = useRouter()
+const ordersStore = useOrdersStore()
 
 const order = ref(null)
 const loading = ref(true)
@@ -343,7 +345,11 @@ async function confirmPayment() {
   paying.value = true
   payError.value = ''
   try {
-    await orderApi.confirmPayment(route.params.orderNumber)
+    // Retrieve the one-time payment token stored by CheckoutView when the order was placed.
+    // The token is required by the server to prove this caller is the same client that
+    // placed the order — preventing token harvest via the public WebSocket.
+    const paymentToken = ordersStore.getTokenForOrder(route.params.orderNumber)
+    await orderApi.confirmPayment(route.params.orderNumber, paymentToken)
     router.push('/my-orders')
   } catch (e) {
     payError.value = e.response?.data?.message || 'Payment failed. Please try again.'

@@ -14,6 +14,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.restaurant.dto.order.PaymentConfirmRequest;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -110,12 +111,17 @@ public class OrderService {
         List<OrderItem> savedItems = orderItemRepository.saveAll(items);
         savedOrder.setItems(savedItems);
 
-        // Create the payment record in PENDING state
+        // Create the payment record in PENDING state.
+        // A unique paymentToken is generated here and returned only to this HTTP caller
+        // (the customer who placed the order). It is deliberately excluded from WebSocket
+        // broadcasts so a third party watching /topic/orders cannot harvest it and confirm
+        // payment for an order they do not own.
         Payment payment = Payment.builder()
                 .order(savedOrder)
                 .method(request.paymentMethod())
                 .amount(total)
                 .status(PaymentStatus.PENDING)
+                .paymentToken(UUID.randomUUID().toString())
                 .build();
 
         Payment savedPayment = paymentRepository.save(payment);
@@ -127,26 +133,49 @@ public class OrderService {
         log.info("Order placed: orderNumber={}, table={}, items={}, total={}",
                 savedOrder.getOrderNumber(), request.tableNumber(), items.size(), total);
 
-        OrderResponse response = mapToResponse(savedOrder);
-        // Notify staff immediately — no pre-payment required to show on dashboard
-        broadcast(response);
+        // Broadcast to staff WITHOUT the payment token — token is only for the customer
+        OrderResponse broadcastResponse = mapToResponse(savedOrder);
+        broadcast(broadcastResponse);
 
-        return response;
+        // Return to the HTTP caller WITH the token so the customer can store it
+        // and supply it when confirming payment.
+        PaymentResponse paymentWithToken = new PaymentResponse(
+                savedPayment.getId(), savedPayment.getMethod(), savedPayment.getStatus(),
+                savedPayment.getAmount(), savedPayment.getTransactionId(), savedPayment.getPaidAt(),
+                savedPayment.getPaymentToken());
+        return new OrderResponse(
+                broadcastResponse.id(), broadcastResponse.orderNumber(),
+                broadcastResponse.customerName(), broadcastResponse.customerPhone(),
+                broadcastResponse.customerEmail(), broadcastResponse.status(),
+                broadcastResponse.totalAmount(), broadcastResponse.notes(),
+                broadcastResponse.tableNumber(), broadcastResponse.items(),
+                paymentWithToken, broadcastResponse.createdAt(), broadcastResponse.updatedAt());
     }
 
     /**
      * Customer confirms payment on the payment page.
      * Marks the payment as PAID and notifies staff via WebSocket.
      * Uses pessimistic locking to prevent double-payment race conditions.
+     *
+     * @param paymentToken the one-time token issued to the customer in the placeOrder()
+     *                     response. Prevents an unauthenticated third party who knows only
+     *                     the order number from marking the order as PAID.
+     *                     Null tokens are accepted for orders placed before this field was
+     *                     introduced (backward compatibility).
      */
     @Transactional
-    public OrderResponse confirmPayment(String orderNumber) {
+    public OrderResponse confirmPayment(String orderNumber, String paymentToken) {
         Order order = orderRepository.findByOrderNumberForUpdate(orderNumber)
                 .orElseThrow(() -> new RuntimeException("Order not found: " + orderNumber));
 
         Payment payment = order.getPayment();
         if (payment == null) {
             throw new RuntimeException("Payment record not found");
+        }
+
+        // Validate the token if one is stored (null means legacy order — skip check)
+        if (payment.getPaymentToken() != null && !payment.getPaymentToken().equals(paymentToken)) {
+            throw new RuntimeException("Invalid payment token");
         }
 
         if (payment.getStatus() == PaymentStatus.PAID) {
@@ -298,8 +327,11 @@ public class OrderService {
         PaymentResponse paymentResponse = null;
         if (order.getPayment() != null) {
             Payment p = order.getPayment();
+            // paymentToken is deliberately null here — it must not appear in WebSocket
+            // broadcasts or subsequent read responses; only the initial placeOrder()
+            // caller receives it (see placeOrder() for the one-time token injection).
             paymentResponse = new PaymentResponse(p.getId(), p.getMethod(), p.getStatus(),
-                    p.getAmount(), p.getTransactionId(), p.getPaidAt());
+                    p.getAmount(), p.getTransactionId(), p.getPaidAt(), null);
         }
 
         // Prefer registered user data; fall back to guest fields for unauthenticated orders

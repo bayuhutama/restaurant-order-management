@@ -26,7 +26,7 @@
           <PhX class="h-3.5 w-3.5" />
         </button>
       </div>
-      <button @click="loadOrders(); loadSessions()" class="p-1.5 rounded-lg hover:bg-gray-700 text-gray-300 transition-colors" title="Refresh">
+      <button @click="refresh" class="p-1.5 rounded-lg hover:bg-gray-700 text-gray-300 transition-colors" title="Refresh">
         <PhArrowCounterClockwise class="h-4 w-4" />
       </button>
       <span class="text-sm text-gray-400 hidden sm:inline">{{ auth.user?.name }}</span>
@@ -219,7 +219,7 @@
  *
  * Search: client-side filter by order number, customer name, phone, or table number.
  */
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDialog } from '@/composables/useDialog'
 import { staffApi } from '@/api'
@@ -251,15 +251,26 @@ const activeTab = ref('ACTIVE')
 
 const ACTIVE_STATUSES = ['PENDING', 'CONFIRMED', 'PREPARING', 'READY']
 
-function countActive() {
-  return orders.value.filter(o => ACTIVE_STATUSES.includes(o.status)).length
-}
+/**
+ * Single-pass status counter — iterates orders.value once instead of running
+ * six separate .filter() calls (one per tab). With 100+ orders and frequent
+ * WebSocket updates this is a meaningful reduction in work per render.
+ */
+const statusCounts = computed(() => {
+  const counts = { PENDING: 0, CONFIRMED: 0, PREPARING: 0, READY: 0, ACTIVE: 0, ALL: 0 }
+  for (const o of orders.value) {
+    counts.ALL++
+    if (o.status in counts) counts[o.status]++
+    if (ACTIVE_STATUSES.includes(o.status)) counts.ACTIVE++
+  }
+  return counts
+})
 
 const statusTabs = computed(() => [
   {
     value: 'ACTIVE',
     label: 'Active',
-    count: countActive(),
+    count: statusCounts.value.ACTIVE,
     activeClass: 'bg-orange-500 text-white',
     badgeClass: 'bg-orange-100 text-orange-700',
     badgeActiveClass: 'bg-white/30 text-white',
@@ -267,7 +278,7 @@ const statusTabs = computed(() => [
   {
     value: 'PENDING',
     label: 'Pending',
-    count: orders.value.filter(o => o.status === 'PENDING').length,
+    count: statusCounts.value.PENDING,
     activeClass: 'bg-yellow-500 text-white',
     badgeClass: 'bg-yellow-100 text-yellow-700',
     badgeActiveClass: 'bg-white/30 text-white',
@@ -275,7 +286,7 @@ const statusTabs = computed(() => [
   {
     value: 'CONFIRMED',
     label: 'Confirmed',
-    count: orders.value.filter(o => o.status === 'CONFIRMED').length,
+    count: statusCounts.value.CONFIRMED,
     activeClass: 'bg-blue-500 text-white',
     badgeClass: 'bg-blue-100 text-blue-700',
     badgeActiveClass: 'bg-white/30 text-white',
@@ -283,7 +294,7 @@ const statusTabs = computed(() => [
   {
     value: 'PREPARING',
     label: 'Preparing',
-    count: orders.value.filter(o => o.status === 'PREPARING').length,
+    count: statusCounts.value.PREPARING,
     activeClass: 'bg-purple-500 text-white',
     badgeClass: 'bg-purple-100 text-purple-700',
     badgeActiveClass: 'bg-white/30 text-white',
@@ -291,7 +302,7 @@ const statusTabs = computed(() => [
   {
     value: 'READY',
     label: 'Ready',
-    count: orders.value.filter(o => o.status === 'READY').length,
+    count: statusCounts.value.READY,
     activeClass: 'bg-green-500 text-white',
     badgeClass: 'bg-green-100 text-green-700',
     badgeActiveClass: 'bg-white/30 text-white',
@@ -299,14 +310,30 @@ const statusTabs = computed(() => [
   {
     value: 'ALL',
     label: 'All',
-    count: orders.value.length,
+    count: statusCounts.value.ALL,
     activeClass: 'bg-gray-700 text-white dark:bg-gray-600',
     badgeClass: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
     badgeActiveClass: 'bg-white/20 text-white',
   },
 ])
 
-/** Applies the active tab filter and search query to the full orders list. */
+/**
+ * Debounced copy of searchQuery — updated 300 ms after the user stops typing.
+ * Prevents running the displayedOrders filter on every keystroke.
+ * Clearing the field (empty string) is applied immediately for instant feedback.
+ */
+const debouncedSearch = ref('')
+let _searchTimer = null
+watch(searchQuery, (val) => {
+  clearTimeout(_searchTimer)
+  if (!val.trim()) {
+    debouncedSearch.value = ''
+  } else {
+    _searchTimer = setTimeout(() => { debouncedSearch.value = val }, 300)
+  }
+})
+
+/** Applies the active tab filter and debounced search query to the full orders list. */
 const displayedOrders = computed(() => {
   let result = orders.value
 
@@ -316,8 +343,8 @@ const displayedOrders = computed(() => {
     result = result.filter(o => o.status === activeTab.value)
   }
 
-  if (searchQuery.value.trim()) {
-    const q = searchQuery.value.trim().toLowerCase()
+  if (debouncedSearch.value.trim()) {
+    const q = debouncedSearch.value.trim().toLowerCase()
     result = result.filter(o =>
       o.orderNumber.toLowerCase().includes(q) ||
       (o.customerName && o.customerName.toLowerCase().includes(q)) ||
@@ -397,6 +424,15 @@ async function loadSessions() {
   }
 }
 
+/**
+ * Fetches orders and sessions in parallel.
+ * Using Promise.all cuts two sequential round-trips down to one wait period
+ * equal to the slower of the two requests.
+ */
+function refresh() {
+  Promise.all([loadOrders(), loadSessions()])
+}
+
 async function endSession(tableNumber) {
   const ok = await showConfirm('The table will be freed for the next customer.', `End session for Table ${tableNumber}?`, 'danger')
   if (!ok) return
@@ -422,9 +458,11 @@ async function updateStatus(orderId, status) {
   }
 }
 
+// Periodic session poll interval handle — cleared on unmount
+let _sessionPollInterval = null
+
 onMounted(() => {
-  loadOrders()
-  loadSessions()
+  refresh()
 
   connect((client) => {
     wsConnected.value = true
@@ -436,10 +474,20 @@ onMounted(() => {
         orders.value[idx] = updated  // update existing order card
       } else {
         orders.value.unshift(updated)  // prepend new order
+        // Only reload sessions for genuinely new orders — a new order may have
+        // created a new table session. Status updates on existing orders never do.
+        loadSessions()
       }
-      // Reload sessions in case a new order opened a new table session
-      loadSessions()
     })
   })
+
+  // Poll sessions every 30 s to pick up session closures made by OTHER staff
+  // clients. New-order events handle the immediate case; this covers the gap
+  // where a session is ended without any new order arriving on the WebSocket.
+  _sessionPollInterval = setInterval(loadSessions, 30_000)
+})
+
+onUnmounted(() => {
+  clearInterval(_sessionPollInterval)
 })
 </script>

@@ -63,12 +63,19 @@ Guest ordering: `POST /api/orders` is `permitAll`. Controller checks `@Authentic
 
 Orders are placed as `PENDING` immediately. Staff **cannot** advance an order from `PENDING → CONFIRMED` until `payment.status == PAID`.
 
-1. Customer places order → `POST /api/orders` → order status `PENDING`, payment status `PENDING`
-2. Customer goes to `/payment/:orderNumber` — chooses QR / Card / Cash
-3. Customer clicks confirm → `POST /api/orders/{orderNumber}/pay` → payment marked `PAID`
-4. Staff can now confirm the order
+1. Customer places order → `POST /api/orders` → order status `PENDING`, payment status `PENDING`, **response includes `payment.paymentToken` (UUID, one-time)**
+2. Frontend stores the token in `ordersStore` (localStorage) via `addOrder(orderNumber, tableNumber, paymentToken)`
+3. Customer goes to `/payment/:orderNumber` — chooses QR / Card / Cash
+4. Customer clicks confirm → frontend calls `ordersStore.getTokenForOrder(orderNumber)` → `POST /api/orders/{orderNumber}/pay` with `{ paymentToken }` body → payment marked `PAID`
+5. Staff can now confirm the order
 
-`confirmPayment` in `OrderService` checks `payment.status == PAID` (not the old `AWAITING_PAYMENT` status). The `AWAITING_PAYMENT` order status exists in the enum but is no longer used.
+**`paymentToken` security design:**
+- Generated as `UUID.randomUUID()` in `placeOrder()` and stored on `Payment.paymentToken` (unique, nullable for backward compat)
+- Returned **only** in the initial `placeOrder()` HTTP response — `mapToResponse()` always passes `null` for the token so it never appears in WebSocket broadcasts or subsequent reads
+- `confirmPayment(orderNumber, paymentToken)` validates the token; `null` DB tokens (legacy orders) skip validation
+- Prevents an unauthenticated client watching `/topic/orders` from harvesting an order number and marking a stranger's order as PAID
+
+`confirmPayment` also checks `payment.status == PAID` (not the old `AWAITING_PAYMENT` status). The `AWAITING_PAYMENT` order status exists in the enum but is no longer used.
 
 ### WebSocket (Real-time)
 
@@ -89,9 +96,9 @@ Multiple customers at the same table place individual orders that accumulate und
 - **`TableSession`** entity: `tableNumber`, `status` (OPEN/PAID/EXPIRED), `openedAt`, `lastActivityAt`, `closedAt`, `paymentMethod`, `@OneToMany orders`.
 - **`TableSessionStatus`** enum: `OPEN, PAID, EXPIRED`.
 - **Flow**: On order placement, `OrderService` calls `TableSessionService.getOrCreateSession(tableNumber)`.
-- **Expiry**: `@Scheduled(fixedDelay=60_000)` marks sessions EXPIRED if `lastActivityAt` older than timeout (default 60 min, `table.session.timeout-minutes`).
+- **Expiry**: `@Scheduled(fixedDelay=60_000)` uses a **single atomic bulk UPDATE** (`UPDATE table_sessions SET status='EXPIRED' WHERE status='OPEN' AND last_activity_at < :cutoff`) instead of a read-then-save loop. This prevents the race where the scheduler could overwrite a concurrently committed `PAID` status with `EXPIRED`.
 - **Staff close**: `POST /api/staff/tables/{tableNumber}/close` marks session EXPIRED immediately — frees the table for the next customer.
-- **Payment**: `POST /api/table-sessions/{tableNumber}/pay` marks session PAID and all orders DELIVERED.
+- **Payment**: `POST /api/table-sessions/{tableNumber}/pay` marks session PAID. Payments are batch-saved with `saveAll()` (one round-trip regardless of order count).
 - **Circular dependency**: broken with `@Lazy` setter injection for `TableSessionService` in `OrderService`.
 
 ### Staff Endpoints
@@ -118,7 +125,7 @@ Multiple customers at the same table place individual orders that accumulate und
 - **`stores/auth.js`** — Pinia store. Persists token + user to `localStorage`.
 - **`stores/cart.js`** — Cart state, persisted to `localStorage`.
 - **`stores/table.js`** — `tableNumber` in `sessionStorage` (clears on tab close). `setTable(n)` / `clearTable()`.
-- **`stores/orders.js`** — Persists `[{ orderNumber, tableNumber }]` to `localStorage`. `addOrder(orderNumber, tableNumber)`, `getNumbersForTable(tableNumber)`, `removeOrder(orderNumber)`. Scopes order history to the current table.
+- **`stores/orders.js`** — Persists `[{ orderNumber, tableNumber, paymentToken }]` to `localStorage`. `addOrder(orderNumber, tableNumber, paymentToken)`, `getNumbersForTable(tableNumber)`, `removeOrder(orderNumber)`, `getTokenForOrder(orderNumber)`. Scopes order history to the current table. Token is stored here so `PaymentView` can retrieve it without a server round-trip.
 - **`composables/useWebSocket.js`** — Wraps `@stomp/stompjs` Client. Auto-disconnects on unmount.
 - **`composables/useDialog.js`** — Module-level singleton for custom alert/confirm dialogs. Returns promises. `showAlert(message, title)` and `showConfirm(message, title, variant)`. Replaces all native `alert()`/`confirm()` calls.
 - **`components/AppDialog.vue`** — The dialog UI. Mounted in `App.vue` via `<Teleport to="body">`. Reads from `useDialog` state. Two variants: `alert` (OK button) and `confirm` (Cancel + Confirm). `danger` variant uses red styling.
@@ -127,7 +134,7 @@ Multiple customers at the same table place individual orders that accumulate und
 - **`components/ImageUpload.vue`** — Drag & drop / click / URL paste image uploader. v-model compatible.
 - **`components/MenuCard.vue`** — Equal-height cards. Description uses `line-clamp-2` with CSS tooltip on hover.
 - **`router/index.js`** — Route guards. Includes `/my-orders`, `/payment/:orderNumber`, `/table/:tableNumber/bill`.
-- **`views/PaymentView.vue`** — Three payment tabs: QR Code (generated with `qrcode` library from order ref), Card (Luhn validation), Cash at Cashier. Redirects to `/my-orders` after confirmation.
+- **`views/PaymentView.vue`** — Three payment tabs: QR Code (generated with `qrcode` library from order ref), Card (Luhn validation), Cash at Cashier. Retrieves `paymentToken` from `ordersStore` and sends it in the confirm request body. Redirects to `/my-orders` after confirmation.
 - **`views/MyOrdersView.vue`** — Shows order history scoped to `tableStore.tableNumber`. On load, checks if the table session is still OPEN (via `tableSessionApi.getSession`). If session is ended, clears orders for that table and resets the table store. Shows three states: no table selected / no orders placed / order list.
 - **`views/OrderTrackingView.vue`** — Live stepper: PENDING→CONFIRMED→PREPARING→READY→DELIVERED.
 - **`views/TableBillView.vue`** — Table bill with payment method selection (CASH/CARD).
@@ -135,7 +142,7 @@ Multiple customers at the same table place individual orders that accumulate und
 
 ### My Orders / Session Scoping
 
-- `ordersStore` stores `{ orderNumber, tableNumber }` pairs in `localStorage`.
+- `ordersStore` stores `{ orderNumber, tableNumber, paymentToken }` tuples in `localStorage`.
 - `MyOrdersView` and `Navbar` only show/count orders matching `tableStore.tableNumber`.
 - When `MyOrdersView` loads and there are stored orders, it calls `tableSessionApi.getSession(tableNumber)`. A 404 means the session was ended by staff → clears all orders for that table and resets `tableStore`.
 - The Navbar polls every 30s and does the same check.
@@ -149,9 +156,11 @@ Shown on `HomeView` when `tableStore.tableNumber` is set and `activeSession` has
 
 - **Header**: search bar, refresh button, username, logout — all in the top bar.
 - **Active Tables**: horizontal scroll row, compact cards (T5, order count, total, End Session).
-- **Status tabs**: Active | Pending | Confirmed | Preparing | Ready | All — each with a live count badge. Replaces the old "Active Only / All Orders" toggle.
+- **Status tabs**: Active | Pending | Confirmed | Preparing | Ready | All — each with a live count badge. Counts are computed in a **single pass** over the orders array (`statusCounts` computed) rather than six separate `.filter()` calls. Replaces the old "Active Only / All Orders" toggle.
 - **Order cards**: colored top border + table number badge, customer + elapsed time, bold item quantities, full-width action button colored by next stage (blue→Confirm, purple→Start Cooking, green→Mark Ready, orange→Mark Served). Loading spinner inside button while updating.
-- Sessions reload on every WebSocket order event (new orders create sessions) and on Refresh.
+- **Search** is debounced 300 ms (`debouncedSearch` ref + watcher) so `displayedOrders` doesn't re-filter on every keystroke.
+- Sessions reload **only when a new order arrives** on the WebSocket (idx === -1), not on every status-update message. A `setInterval(loadSessions, 30_000)` (cleared on unmount) covers the gap where another staff client closes a session.
+- The refresh button calls `Promise.all([loadOrders(), loadSessions()])` — both requests run in parallel.
 
 ### Responsive Design
 
@@ -171,6 +180,21 @@ Client-side `computed` filtering (reactive, no network calls):
 | `StaffDashboard.vue` | Order number, customer name, phone, table number |
 | `admin/OrdersView.vue` | Order number, customer name, phone, table number |
 | `admin/MenuManagement.vue` | Item name or description + category/availability filters |
+
+### Performance
+
+#### Backend
+- `spring.jpa.properties.hibernate.default_batch_fetch_size=30` — lazy collections (e.g. `Order.items`, `TableSession.orders`) are loaded in batches of up to 30 with `IN (...)` queries instead of one query per entity (eliminates most N+1 patterns on list endpoints).
+- `@EntityGraph(attributePaths = {"category"})` on all `MenuItemRepository` finders — JOIN FETCHes the `Category` association so `mapMenuItem()` doesn't trigger a separate query per item.
+- `@EntityGraph(attributePaths = {"items", "payment", "user"})` on `OrderRepository.findByOrderNumber` and `findByTableSessionId` — used by `mapToResponse()` to avoid N+1 on single-order and session-order lookups.
+- `@Index` on `Order`: composite `(status, created_at)`, `table_number`, `table_session_id`.
+- `@Index` on `TableSession`: composite `(table_number, status)` (hot path for `getOrCreateSession`), `status`.
+
+#### Frontend
+- **`cartMap`** computed in `cart.js` — `Map<id, quantity>` for O(1) quantity lookups in `MenuCard` instead of `Array.find()` per render.
+- **Debounced `persist()`** in `cart.js` and `orders.js` — 300 ms debounce coalesces rapid mutations into one `localStorage.setItem`.
+- **Debounced search** in `HomeView` and `StaffDashboard` — 300 ms debounce; clearing the field is applied immediately.
+- **Single-pass status counts** in `StaffDashboard` — `statusCounts` computed iterates orders once vs. 6 separate `.filter()` calls.
 
 ### Database
 

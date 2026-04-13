@@ -36,8 +36,13 @@ export const menuApi = {
 // ── Orders (public) ───────────────────────────────────────────────────────────
 export const orderApi = {
   placeOrder: (data) => api.post('/orders', data),
-  /** Customer confirms payment on the payment page. */
-  confirmPayment: (orderNumber) => api.post(`/orders/${orderNumber}/pay`),
+  /**
+   * Customer confirms payment on the payment page.
+   * @param paymentToken the one-time token issued in the placeOrder response;
+   *                     required by the server to prevent unauthorised confirmation.
+   */
+  confirmPayment: (orderNumber, paymentToken) =>
+    api.post(`/orders/${orderNumber}/pay`, { paymentToken }),
   trackOrder: (orderNumber) => api.get(`/orders/track/${orderNumber}`),
   myOrders: () => api.get('/orders/my')
 }

@@ -20,6 +20,19 @@ export const useCartStore = defineStore('cart', () => {
     items.value.reduce((sum, item) => sum + item.quantity, 0)
   )
 
+  /**
+   * O(1) lookup map from item ID → quantity.
+   * MenuCard uses this instead of cart.items.find() so that a cart change
+   * in a 100-card grid doesn't trigger 100 linear searches.
+   */
+  const cartMap = computed(() => {
+    const map = new Map()
+    for (const item of items.value) {
+      map.set(item.id, item.quantity)
+    }
+    return map
+  })
+
   /** Adds a menu item to the cart, or increments its quantity if already present. */
   function addItem(menuItem) {
     const existing = items.value.find(i => i.id === menuItem.id)
@@ -56,10 +69,18 @@ export const useCartStore = defineStore('cart', () => {
     persist()
   }
 
-  /** Writes the current cart state to localStorage. */
+  /**
+   * Debounced write to localStorage.
+   * Rapid mutations (e.g. tapping + quickly) are coalesced into a single write,
+   * avoiding synchronous serialisation on every keypress/tap.
+   */
+  let _persistTimer = null
   function persist() {
-    localStorage.setItem('cart', JSON.stringify(items.value))
+    clearTimeout(_persistTimer)
+    _persistTimer = setTimeout(() => {
+      localStorage.setItem('cart', JSON.stringify(items.value))
+    }, 300)
   }
 
-  return { items, total, itemCount, addItem, removeItem, updateQuantity, clearCart }
+  return { items, total, itemCount, cartMap, addItem, removeItem, updateQuantity, clearCart }
 })

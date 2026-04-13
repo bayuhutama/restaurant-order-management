@@ -23,7 +23,14 @@ import java.util.List;
  * See OrderStatus for detailed rules.
  */
 @Entity
-@Table(name = "orders")
+@Table(name = "orders", indexes = {
+        // status is filtered on every staff/admin query — composite with created_at covers sorted filtering
+        @Index(name = "idx_orders_status_created_at", columnList = "status, created_at"),
+        // table_number is used by the running-bill banner and WebSocket topic routing
+        @Index(name = "idx_orders_table_number", columnList = "table_number"),
+        // table_session_id FK lookups (findByTableSessionId) need an index for fast joins
+        @Index(name = "idx_orders_table_session_id", columnList = "table_session_id")
+})
 @Data
 @Builder
 @NoArgsConstructor

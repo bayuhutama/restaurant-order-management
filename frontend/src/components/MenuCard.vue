@@ -72,9 +72,11 @@ const props = defineProps({
 
 const cart = useCartStore()
 
-// Returns 0 if the item is not in the cart, otherwise returns its quantity
-const quantityInCart = computed(() => {
-  const found = cart.items.find(i => i.id === props.item.id)
-  return found ? found.quantity : 0
-})
+/**
+ * O(1) quantity lookup via the store's cartMap (Map<id, quantity>).
+ * Avoids a linear scan over cart.items on every render — relevant because
+ * all MenuCards re-compute when the cart changes, so with 100 cards and
+ * cart.items.find() that's 100 linear searches per update.
+ */
+const quantityInCart = computed(() => cart.cartMap.get(props.item.id) ?? 0)
 </script>

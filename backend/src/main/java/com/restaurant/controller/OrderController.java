@@ -2,6 +2,7 @@ package com.restaurant.controller;
 
 import com.restaurant.dto.order.OrderRequest;
 import com.restaurant.dto.order.OrderResponse;
+import com.restaurant.dto.order.PaymentConfirmRequest;
 import com.restaurant.service.OrderService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,8 @@ public class OrderController {
      * Places a new order and creates a pending payment record.
      * Assigns the order to an existing or new table session.
      * Notifies staff via WebSocket immediately after saving.
+     * The response includes a one-time {@code payment.paymentToken} that the
+     * customer must store and supply when calling the pay endpoint.
      */
     @PostMapping
     public ResponseEntity<OrderResponse> placeOrder(@Valid @RequestBody OrderRequest request) {
@@ -40,10 +43,15 @@ public class OrderController {
 
     /**
      * Marks the order's payment as PAID.
+     * Requires the {@code paymentToken} that was issued in the placeOrder response.
+     * This prevents an unauthenticated third party who knows only the order number
+     * (e.g. by watching the public WebSocket) from marking a stranger's order as PAID.
      * After this, staff can advance the order from PENDING → CONFIRMED.
      */
     @PostMapping("/{orderNumber}/pay")
-    public ResponseEntity<OrderResponse> confirmPayment(@PathVariable String orderNumber) {
-        return ResponseEntity.ok(orderService.confirmPayment(orderNumber));
+    public ResponseEntity<OrderResponse> confirmPayment(
+            @PathVariable String orderNumber,
+            @Valid @RequestBody PaymentConfirmRequest request) {
+        return ResponseEntity.ok(orderService.confirmPayment(orderNumber, request.paymentToken()));
     }
 }

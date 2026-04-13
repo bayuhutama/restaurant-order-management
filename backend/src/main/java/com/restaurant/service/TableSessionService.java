@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -122,15 +123,21 @@ public class TableSessionService {
 
         List<Order> orders = orderRepository.findByTableSessionId(session.getId());
 
-        // Mark all unpaid order payments as PAID with the chosen method
+        // Collect all payments that need updating, then batch-save in one round-trip
+        // instead of one UPDATE per order (N round-trips → 1).
+        List<Payment> paymentsToUpdate = new java.util.ArrayList<>();
+        LocalDateTime now = LocalDateTime.now();
         for (Order order : orders) {
             Payment payment = order.getPayment();
             if (payment != null && payment.getStatus() == PaymentStatus.PENDING) {
                 payment.setStatus(PaymentStatus.PAID);
                 payment.setMethod(request.paymentMethod());
-                payment.setPaidAt(LocalDateTime.now());
-                paymentRepository.save(payment);
+                payment.setPaidAt(now);
+                paymentsToUpdate.add(payment);
             }
+        }
+        if (!paymentsToUpdate.isEmpty()) {
+            paymentRepository.saveAll(paymentsToUpdate);
         }
 
         session.setStatus(TableSessionStatus.PAID);
@@ -144,20 +151,23 @@ public class TableSessionService {
 
     /**
      * Runs every 60 seconds.
-     * Finds all OPEN sessions whose lastActivityAt is older than the configured timeout
-     * and marks them EXPIRED to free up idle tables automatically.
+     * Atomically marks all OPEN sessions that have been idle past the configured timeout
+     * as EXPIRED using a single bulk UPDATE statement.
+     *
+     * The previous implementation did a SELECT then individual saves in a loop, leaving
+     * a race window where paySession() could commit status=PAID between the SELECT and
+     * the save(), causing this scheduler to silently overwrite PAID → EXPIRED.
+     * The bulk UPDATE's WHERE clause filters on status=OPEN at UPDATE time, so any
+     * session that was concurrently transitioned to PAID or EXPIRED is safely excluded.
      */
     @Scheduled(fixedDelay = 60_000)
     @Transactional
     public void expireInactiveSessions() {
-        LocalDateTime cutoff = LocalDateTime.now().minusMinutes(sessionTimeoutMinutes);
-        List<TableSession> expired = tableSessionRepository
-                .findByStatusAndLastActivityAtBefore(TableSessionStatus.OPEN, cutoff);
-        for (TableSession session : expired) {
-            session.setStatus(TableSessionStatus.EXPIRED);
-            session.setClosedAt(LocalDateTime.now());
-            tableSessionRepository.save(session);
-            log.info("Expired session for table {} (inactive since {})", session.getTableNumber(), session.getLastActivityAt());
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime cutoff = now.minusMinutes(sessionTimeoutMinutes);
+        int count = tableSessionRepository.bulkExpireInactiveSessions(cutoff, now);
+        if (count > 0) {
+            log.info("Expired {} inactive table session(s) (idle since before {})", count, cutoff);
         }
     }
 

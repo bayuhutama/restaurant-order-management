@@ -102,7 +102,7 @@
  * Running bill banner: shown when the table has a session with at least one unpaid order.
  * Search: client-side filter by name or description, combined with the category filter.
  */
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter, useRoute, RouterLink } from 'vue-router'
 import { menuApi, tableSessionApi } from '@/api'
 import { useTableStore } from '@/stores/table'
@@ -120,19 +120,35 @@ const loading = ref(true)
 const activeSession = ref(null)
 const searchQuery = ref('')
 
+/**
+ * Debounced copy of searchQuery — updated 300 ms after the user stops typing.
+ * Prevents re-filtering the entire menu list on every keystroke.
+ * Clearing the field (empty string) is applied immediately for instant feedback.
+ */
+const debouncedSearch = ref('')
+let _searchTimer = null
+watch(searchQuery, (val) => {
+  clearTimeout(_searchTimer)
+  if (!val.trim()) {
+    debouncedSearch.value = ''
+  } else {
+    _searchTimer = setTimeout(() => { debouncedSearch.value = val }, 300)
+  }
+})
+
 /** True if the table session has any order where payment is still pending. */
 const hasUnpaidOrders = computed(() =>
   activeSession.value?.orders?.some(o => o.payment?.status !== 'PAID') ?? false
 )
 
-/** Applies category and search filters to the available menu items. */
+/** Applies category and debounced search filters to the available menu items. */
 const filteredItems = computed(() => {
   let items = menuItems.value.filter(i => i.available)
   if (selectedCategory.value) {
     items = items.filter(i => i.category?.id === selectedCategory.value)
   }
-  if (searchQuery.value.trim()) {
-    const q = searchQuery.value.trim().toLowerCase()
+  if (debouncedSearch.value.trim()) {
+    const q = debouncedSearch.value.trim().toLowerCase()
     items = items.filter(i =>
       i.name.toLowerCase().includes(q) ||
       (i.description && i.description.toLowerCase().includes(q))

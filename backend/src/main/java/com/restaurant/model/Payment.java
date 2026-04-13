@@ -49,6 +49,18 @@ public class Payment {
     @Column(nullable = false)
     private BigDecimal amount;
 
+    /**
+     * One-time cryptographic token generated when the order is placed.
+     * Must be supplied by the customer when calling POST /api/orders/{orderNumber}/pay.
+     * This prevents an unauthenticated third party who learns the order number (e.g. by
+     * watching the public /topic/orders WebSocket) from marking a stranger's order as PAID.
+     *
+     * Nullable to preserve backward compatibility with payments created before this
+     * field was introduced — those rows are exempt from token validation.
+     */
+    @Column(name = "payment_token", unique = true)
+    private String paymentToken;
+
     /** System-generated transaction ID set when the payment is confirmed (e.g. TXN-XXXXXXXX). */
     @Column(name = "transaction_id")
     private String transactionId;
