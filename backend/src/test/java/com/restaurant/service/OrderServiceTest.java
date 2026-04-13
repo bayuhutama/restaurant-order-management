@@ -191,7 +191,9 @@ class OrderServiceTest {
 
     @Test
     void updateOrderStatus_changesStatus() {
-        when(orderRepository.findById(1L)).thenReturn(Optional.of(pendingOrder));
+        // Payment must be PAID before PENDING → CONFIRMED transition is allowed
+        cashPayment.setStatus(PaymentStatus.PAID);
+        when(orderRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(pendingOrder));
         when(orderRepository.save(any(Order.class))).thenReturn(pendingOrder);
 
         OrderResponse response = orderService.updateOrderStatus(1L, OrderStatus.CONFIRMED);
@@ -206,7 +208,7 @@ class OrderServiceTest {
     void updateOrderStatus_delivered_marksCashPaymentAsPaid() {
         // Must be in READY state to transition to DELIVERED
         pendingOrder.setStatus(OrderStatus.READY);
-        when(orderRepository.findById(1L)).thenReturn(Optional.of(pendingOrder));
+        when(orderRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(pendingOrder));
         when(orderRepository.save(any(Order.class))).thenReturn(pendingOrder);
 
         orderService.updateOrderStatus(1L, OrderStatus.DELIVERED);
@@ -227,7 +229,7 @@ class OrderServiceTest {
         pendingOrder.setStatus(OrderStatus.READY);
         pendingOrder.setPayment(cardPayment);
 
-        when(orderRepository.findById(1L)).thenReturn(Optional.of(pendingOrder));
+        when(orderRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(pendingOrder));
         when(orderRepository.save(any(Order.class))).thenReturn(pendingOrder);
 
         orderService.updateOrderStatus(1L, OrderStatus.DELIVERED);
@@ -240,7 +242,7 @@ class OrderServiceTest {
     void updateOrderStatus_invalidTransition_throws() {
         // DELIVERED is a terminal state — no further transitions allowed
         pendingOrder.setStatus(OrderStatus.DELIVERED);
-        when(orderRepository.findById(1L)).thenReturn(Optional.of(pendingOrder));
+        when(orderRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(pendingOrder));
 
         assertThatThrownBy(() -> orderService.updateOrderStatus(1L, OrderStatus.PENDING))
                 .isInstanceOf(RuntimeException.class)
@@ -249,7 +251,7 @@ class OrderServiceTest {
 
     @Test
     void updateOrderStatus_throws_whenOrderNotFound() {
-        when(orderRepository.findById(999L)).thenReturn(Optional.empty());
+        when(orderRepository.findByIdForUpdate(999L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> orderService.updateOrderStatus(999L, OrderStatus.CONFIRMED))
                 .isInstanceOf(RuntimeException.class)

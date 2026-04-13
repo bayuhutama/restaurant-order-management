@@ -26,6 +26,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -147,7 +148,7 @@ class TableSessionServiceTest {
         assertThat(openSession.getClosedAt()).isNotNull();
         assertThat(payment.getStatus()).isEqualTo(PaymentStatus.PAID);
         assertThat(payment.getPaidAt()).isNotNull();
-        verify(paymentRepository).save(payment);
+        verify(paymentRepository).saveAll(anyList());
     }
 
     @Test
@@ -183,41 +184,33 @@ class TableSessionServiceTest {
 
         tableSessionService.paySession("5", new PaySessionRequest(PaymentMethod.CASH));
 
-        // Already-PAID payment should not be saved again
-        verify(paymentRepository, never()).save(alreadyPaid);
+        // Already-PAID payment should not trigger saveAll (empty list is skipped)
+        verify(paymentRepository, never()).saveAll(any());
     }
 
     // ── expireInactiveSessions ────────────────────────────────────────────────
 
     @Test
-    void expireInactiveSessions_expiresSessions_olderThanTimeout() {
-        TableSession staleSession = TableSession.builder()
-                .id(2L)
-                .tableNumber("3")
-                .status(TableSessionStatus.OPEN)
-                .build();
-        staleSession.setLastActivityAt(LocalDateTime.now().minusHours(2));
-
-        when(tableSessionRepository.findByStatusAndLastActivityAtBefore(
-                eq(TableSessionStatus.OPEN), any(LocalDateTime.class)))
-                .thenReturn(List.of(staleSession));
-        when(tableSessionRepository.save(any())).thenReturn(staleSession);
+    void expireInactiveSessions_callsBulkExpire_andLogsWhenRowsUpdated() {
+        when(tableSessionRepository.bulkExpireInactiveSessions(
+                any(LocalDateTime.class), any(LocalDateTime.class)))
+                .thenReturn(2);
 
         tableSessionService.expireInactiveSessions();
 
-        assertThat(staleSession.getStatus()).isEqualTo(TableSessionStatus.EXPIRED);
-        assertThat(staleSession.getClosedAt()).isNotNull();
-        verify(tableSessionRepository).save(staleSession);
+        verify(tableSessionRepository).bulkExpireInactiveSessions(
+                any(LocalDateTime.class), any(LocalDateTime.class));
     }
 
     @Test
     void expireInactiveSessions_doesNothing_whenNoStaleSessions() {
-        when(tableSessionRepository.findByStatusAndLastActivityAtBefore(
-                eq(TableSessionStatus.OPEN), any(LocalDateTime.class)))
-                .thenReturn(List.of());
+        when(tableSessionRepository.bulkExpireInactiveSessions(
+                any(LocalDateTime.class), any(LocalDateTime.class)))
+                .thenReturn(0);
 
         tableSessionService.expireInactiveSessions();
 
-        verify(tableSessionRepository, never()).save(any());
+        verify(tableSessionRepository).bulkExpireInactiveSessions(
+                any(LocalDateTime.class), any(LocalDateTime.class));
     }
 }

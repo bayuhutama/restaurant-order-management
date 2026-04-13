@@ -77,7 +77,7 @@ class AuthServiceTest {
 
         assertThatThrownBy(() -> authService.register(request))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Username already taken");
+                .hasMessageContaining("Registration failed");
 
         verify(userRepository, never()).save(any());
     }
@@ -86,12 +86,13 @@ class AuthServiceTest {
     void register_duplicateEmail_throws() {
         RegisterRequest request = new RegisterRequest("John Doe", "johndoe", "john@example.com", "Password123", null);
 
+        // existsByUsername || existsByEmail — service checks both in one condition
         when(userRepository.existsByUsername("johndoe")).thenReturn(false);
         when(userRepository.existsByEmail("john@example.com")).thenReturn(true);
 
         assertThatThrownBy(() -> authService.register(request))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Email already registered");
+                .hasMessageContaining("Registration failed");
 
         verify(userRepository, never()).save(any());
     }

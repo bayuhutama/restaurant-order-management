@@ -9,6 +9,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.HashMap;
 import java.util.List;
@@ -29,22 +30,29 @@ public class GlobalExceptionHandler {
      * is treated as an unexpected internal error and masked with a generic message.
      */
     private static final List<String> SAFE_PREFIXES = List.of(
+            // OrderService
             "Menu item not found",
             "Menu item is not available",
             "Order not found",
-            "Category not found",
             "Payment record not found",
             "Payment confirmation failed",
             "Order has already been paid",
             "Cannot transition order",
             "Cannot confirm order",
-            "Cannot cancel",
-            "Username already exists",
-            "Category already exists",
-            "Table session not found",
-            "No open session",
-            "Session is not open",
-            "Orders cannot be cancelled"
+            // TableSessionService
+            "No active session",
+            // StaffController
+            "Orders cannot be cancelled",
+            // MenuService
+            "Category not found",
+            // AuthService
+            "Registration failed",
+            // FileUploadService
+            "Only image files are allowed",
+            "File size must not exceed",
+            "File content does not match",
+            "Invalid file path",
+            "File is too small"
     );
 
     /**
@@ -99,6 +107,20 @@ public class GlobalExceptionHandler {
         log.warn("Access denied: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(Map.of("message", "Access denied"));
+    }
+
+    /**
+     * Handles path variable / query parameter type conversion failures.
+     * For example, requesting /api/menu/abc when the endpoint expects a Long id.
+     * Returns 400 Bad Request with a user-friendly message instead of leaking
+     * the internal class cast details.
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<Map<String, String>> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        log.warn("Type mismatch: parameter '{}' could not be converted to {}", ex.getName(),
+                ex.getRequiredType() != null ? ex.getRequiredType().getSimpleName() : "unknown");
+        return ResponseEntity.badRequest()
+                .body(Map.of("message", "Invalid parameter: " + ex.getName()));
     }
 
     /**

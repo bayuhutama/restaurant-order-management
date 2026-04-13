@@ -158,7 +158,7 @@ class OrderControllerIntegrationTest {
         mockMvc.perform(post("/api/orders")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isNotFound());
     }
 
     // ── Track Order ───────────────────────────────────────────────────────────
@@ -190,9 +190,9 @@ class OrderControllerIntegrationTest {
     }
 
     @Test
-    void trackOrder_unknownOrderNumber_returns400() throws Exception {
+    void trackOrder_unknownOrderNumber_returns404() throws Exception {
         mockMvc.perform(get("/api/orders/track/ORD-INVALID-000000"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isNotFound());
     }
 
     // ── Admin: update order status ────────────────────────────────────────────
@@ -216,11 +216,20 @@ class OrderControllerIntegrationTest {
 
         Map<?, ?> placedBody = objectMapper.readValue(placed.getResponse().getContentAsString(), Map.class);
         Long orderId = ((Number) placedBody.get("id")).longValue();
+        String orderNumber = (String) placedBody.get("orderNumber");
+        Map<?, ?> paymentBody = (Map<?, ?>) placedBody.get("payment");
+        String paymentToken = (String) paymentBody.get("paymentToken");
+
+        // Pay the order first — required before PENDING → CONFIRMED
+        mockMvc.perform(post("/api/orders/" + orderNumber + "/pay")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"paymentToken\": \"" + paymentToken + "\"}"))
+                .andExpect(status().isOk());
 
         // Get admin JWT
         String adminToken = loginAs("admin", "Admin123!");
 
-        // Update status to CONFIRMED
+        // Update status to CONFIRMED (now allowed because payment is PAID)
         mockMvc.perform(patch("/api/staff/orders/" + orderId + "/status")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
