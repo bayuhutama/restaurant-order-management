@@ -520,8 +520,9 @@ PENDING → CONFIRMED → PREPARING → READY → DELIVERED
 2. Frontend stores the token in `localStorage` alongside the order number
 3. Customer is redirected to `/payment/:orderNumber`, selects: **QR Code**, **Card**, or **Cash at Cashier**
 4. Customer confirms → frontend sends `paymentToken` in the request body → payment marked `PAID`
-5. Staff can now confirm the order
-6. For whole-table settlement → `/table/:tableNumber/bill`
+5. Frontend shows a success dialog, then **awaits** `router.push('/my-orders')` so the page transitions cleanly (without the await, a silent router rejection would leave the customer stuck on the payment page)
+6. Staff can now confirm the order
+7. For whole-table settlement → `/table/:tableNumber/bill`
 
 > **Security note:** The `paymentToken` is a UUID generated at order creation. It is returned only in the `POST /api/orders` response and is never included in WebSocket broadcasts or subsequent read responses. This prevents an unauthenticated third party who learns the order number from the public WebSocket from marking a stranger's order as PAID.
 
