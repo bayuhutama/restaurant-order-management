@@ -2,7 +2,6 @@ package com.restaurant.controller;
 
 import com.restaurant.dto.auth.AuthResponse;
 import com.restaurant.dto.auth.LoginRequest;
-import com.restaurant.dto.auth.RegisterRequest;
 import com.restaurant.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -11,7 +10,9 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * Handles user authentication endpoints.
- * Both routes are public (no JWT required) as defined in SecurityConfig.
+ * The login route is public (no JWT required). Only staff and admin accounts
+ * log in — STAFF and ADMIN users are provisioned by DataInitializer or seeded
+ * manually. Customers order as guests and never authenticate.
  */
 @RestController
 @RequestMapping("/api/auth")
@@ -19,12 +20,6 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
-
-    /** Registers a new CUSTOMER account and returns a JWT token immediately. */
-    @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
-        return ResponseEntity.ok(authService.register(request));
-    }
 
     /** Authenticates with username + password and returns a JWT token. */
     @PostMapping("/login")

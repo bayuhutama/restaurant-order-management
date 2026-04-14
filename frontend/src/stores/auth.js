@@ -3,17 +3,19 @@ import { ref, computed } from 'vue'
 import { authApi } from '@/api'
 
 /**
- * Pinia store for authentication state.
+ * Pinia store for staff/admin authentication state.
  *
- * Storage choice: sessionStorage (not localStorage). Staff and admin sessions
- * deliberately end when the browser/tab is closed so a shared device (e.g. the
- * kitchen tablet) does not stay logged in after the user walks away. Page
- * refreshes within the same tab still restore the session.
+ * Customers are not authenticated — they order as guests via QR scan, so
+ * this store only ever holds STAFF or ADMIN sessions.
+ *
+ * Storage choice: sessionStorage (not localStorage). Sessions deliberately
+ * end when the browser/tab is closed so a shared device (e.g. the kitchen
+ * tablet) does not stay logged in after the user walks away. Page refreshes
+ * within the same tab still restore the session.
  *
  * Role helpers:
  * - isAdmin: only ADMIN role
  * - isStaff: STAFF or ADMIN (admins can access staff features too)
- * - isCustomer: only CUSTOMER role
  */
 export const useAuthStore = defineStore('auth', () => {
   const token = ref(sessionStorage.getItem('token') || null)
@@ -22,18 +24,10 @@ export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated = computed(() => !!token.value)
   const isAdmin = computed(() => user.value?.role === 'ADMIN')
   const isStaff = computed(() => user.value?.role === 'STAFF' || user.value?.role === 'ADMIN')
-  const isCustomer = computed(() => user.value?.role === 'CUSTOMER')
 
   /** Calls the login API and saves the returned session. */
   async function login(username, password) {
     const res = await authApi.login({ username, password })
-    setSession(res.data)
-    return res.data
-  }
-
-  /** Calls the register API and saves the returned session. */
-  async function register(name, username, email, password, phone) {
-    const res = await authApi.register({ name, username, email, password, phone })
     setSession(res.data)
     return res.data
   }
@@ -54,5 +48,5 @@ export const useAuthStore = defineStore('auth', () => {
     sessionStorage.removeItem('user')
   }
 
-  return { token, user, isAuthenticated, isAdmin, isStaff, isCustomer, login, register, logout }
+  return { token, user, isAuthenticated, isAdmin, isStaff, login, logout }
 })

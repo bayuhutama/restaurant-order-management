@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Full-stack **dine-in** restaurant order management system (brand name: **Savoria**) with three roles: Guest/Customer (table-based ordering via QR code), Staff (real-time order dashboard with session management), Admin (menu/category CRUD, order management).
+Full-stack **dine-in** restaurant order management system (brand name: **Savoria**). Customers are always **guests** — they order via QR-code/table flow and never authenticate. Only two account roles exist: **Staff** (real-time order dashboard with session management) and **Admin** (menu/category CRUD, order management).
 
 - **Backend**: Spring Boot 3.2.3 (Java 17), MySQL 8.0, JWT, WebSocket (STOMP)
 - **Frontend**: Vue 3, Vite, Tailwind CSS, Pinia, Vue Router, Axios, @stomp/stompjs, @phosphor-icons/vue, qrcode
@@ -45,12 +45,12 @@ npm run build                # Production build
 
 ### Backend Package Structure (`backend/src/main/java/com/restaurant/`)
 
-- **`model/`** — JPA entities: `User`, `Category`, `MenuItem`, `Order` (`@ManyToOne TableSession`), `OrderItem`, `Payment`, `TableSession`. Enums in `model/enums/`: `Role`, `OrderStatus`, `PaymentMethod`, `PaymentStatus`, `TableSessionStatus`.
+- **`model/`** — JPA entities: `User` (STAFF/ADMIN only), `Category`, `MenuItem`, `Order` (`@ManyToOne TableSession`), `OrderItem`, `Payment`, `TableSession`. Enums in `model/enums/`: `Role` (STAFF, ADMIN), `OrderStatus`, `PaymentMethod`, `PaymentStatus`, `TableSessionStatus`.
 - **`repository/`** — Spring Data JPA repositories, one per entity.
 - **`dto/`** — Request/response records grouped by domain: `dto/auth/`, `dto/menu/`, `dto/order/`.
 - **`security/`** — `JwtUtil` (jjwt 0.12.x), `JwtAuthenticationFilter`, `UserDetailsServiceImpl`.
 - **`config/`** — `SecurityConfig`, `WebSocketConfig`, `WebConfig` (serves `/uploads/**`), `DataInitializer` (seeds admin/staff + sample menu), `GlobalExceptionHandler`.
-- **`service/`** — `AuthService`, `MenuService`, `OrderService` (WebSocket broadcast; `@Lazy` setter injection for `TableSessionService` to break circular dependency), `TableSessionService`, `FileUploadService`.
+- **`service/`** — `AuthService` (login only), `MenuService`, `OrderService` (WebSocket broadcast; `@Lazy` setter injection for `TableSessionService` to break circular dependency), `TableSessionService`, `FileUploadService`.
 - **`controller/`** — `AuthController` (`/api/auth/**`), `MenuController` (public), `OrderController` (`/api/orders`), `StaffController` (`/api/staff/**`, STAFF or ADMIN), `AdminController` (`/api/admin/**`, ADMIN), `FileUploadController`, `TableSessionController` (`/api/table-sessions/**`, public).
 
 ### Security / Auth Flow
@@ -60,7 +60,6 @@ JWT passed as `Authorization: Bearer <token>`. Public endpoints work without a t
 Token lifetime is **role-based** — see `JwtUtil.generateToken(User)`:
 - **ADMIN**: `jwt.expiration.admin` (default **1h**) — short to limit blast radius of a stolen admin token.
 - **STAFF**: `jwt.expiration.staff` (default **13h**) — covers a full 10AM–10PM shift.
-- **CUSTOMER**: `jwt.expiration` (default 8h).
 
 **Single-session enforcement** via a `tokenVersion` column on `User`:
 - `AuthService.login()` increments `user.tokenVersion` on every successful login and saves the user before issuing the JWT.

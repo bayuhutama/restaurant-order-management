@@ -2,7 +2,6 @@ package com.restaurant.service;
 
 import com.restaurant.dto.auth.AuthResponse;
 import com.restaurant.dto.auth.LoginRequest;
-import com.restaurant.dto.auth.RegisterRequest;
 import com.restaurant.model.User;
 import com.restaurant.model.enums.Role;
 import com.restaurant.repository.UserRepository;
@@ -16,21 +15,18 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
 
     @Mock UserRepository userRepository;
-    @Mock PasswordEncoder passwordEncoder;
     @Mock JwtUtil jwtUtil;
     @Mock AuthenticationManager authenticationManager;
     @InjectMocks AuthService authService;
@@ -41,81 +37,37 @@ class AuthServiceTest {
     void setUp() {
         sampleUser = User.builder()
                 .id(1L)
-                .name("John Doe")
-                .username("johndoe")
-                .email("john@example.com")
+                .name("Jane Staff")
+                .username("janestaff")
+                .email("jane@example.com")
                 .password("encodedPassword")
-                .role(Role.CUSTOMER)
+                .role(Role.STAFF)
+                .tokenVersion(0L)
                 .build();
     }
 
-    // ── Register ─────────────────────────────────────────────────────────────
-
     @Test
-    void register_success() {
-        RegisterRequest request = new RegisterRequest("John Doe", "johndoe", "john@example.com", "Password123", "08123456789");
+    void login_success_bumpsTokenVersionAndReturnsToken() {
+        LoginRequest request = new LoginRequest("janestaff", "Password123");
 
-        when(userRepository.existsByUsername("johndoe")).thenReturn(false);
-        when(userRepository.existsByEmail("john@example.com")).thenReturn(false);
-        when(passwordEncoder.encode("Password123")).thenReturn("encodedPassword");
-        when(userRepository.save(any(User.class))).thenReturn(sampleUser);
-        when(jwtUtil.generateToken(sampleUser)).thenReturn("jwt-token");
-
-        AuthResponse response = authService.register(request);
-
-        assertThat(response.token()).isEqualTo("jwt-token");
-        assertThat(response.username()).isEqualTo("johndoe");
-        assertThat(response.role()).isEqualTo("CUSTOMER");
-        verify(userRepository).save(any(User.class));
-    }
-
-    @Test
-    void register_duplicateUsername_throws() {
-        RegisterRequest request = new RegisterRequest("John Doe", "johndoe", "john@example.com", "Password123", null);
-
-        when(userRepository.existsByUsername("johndoe")).thenReturn(true);
-
-        assertThatThrownBy(() -> authService.register(request))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Registration failed");
-
-        verify(userRepository, never()).save(any());
-    }
-
-    @Test
-    void register_duplicateEmail_throws() {
-        RegisterRequest request = new RegisterRequest("John Doe", "johndoe", "john@example.com", "Password123", null);
-
-        // existsByUsername || existsByEmail — service checks both in one condition
-        when(userRepository.existsByUsername("johndoe")).thenReturn(false);
-        when(userRepository.existsByEmail("john@example.com")).thenReturn(true);
-
-        assertThatThrownBy(() -> authService.register(request))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Registration failed");
-
-        verify(userRepository, never()).save(any());
-    }
-
-    // ── Login ─────────────────────────────────────────────────────────────────
-
-    @Test
-    void login_success() {
-        LoginRequest request = new LoginRequest("johndoe", "Password123");
-
-        when(userRepository.findByUsername("johndoe")).thenReturn(Optional.of(sampleUser));
-        when(jwtUtil.generateToken(sampleUser)).thenReturn("jwt-token");
+        when(userRepository.findByUsername("janestaff")).thenReturn(Optional.of(sampleUser));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(jwtUtil.generateToken(any(User.class))).thenReturn("jwt-token");
 
         AuthResponse response = authService.login(request);
 
         assertThat(response.token()).isEqualTo("jwt-token");
-        assertThat(response.username()).isEqualTo("johndoe");
+        assertThat(response.username()).isEqualTo("janestaff");
+        assertThat(response.role()).isEqualTo("STAFF");
+        // tokenVersion must be incremented before the token is issued
+        assertThat(sampleUser.getTokenVersion()).isEqualTo(1L);
         verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
+        verify(userRepository).save(sampleUser);
     }
 
     @Test
     void login_badCredentials_throws() {
-        LoginRequest request = new LoginRequest("johndoe", "wrongpassword");
+        LoginRequest request = new LoginRequest("janestaff", "wrongpassword");
 
         doThrow(new BadCredentialsException("Bad credentials"))
                 .when(authenticationManager).authenticate(any());

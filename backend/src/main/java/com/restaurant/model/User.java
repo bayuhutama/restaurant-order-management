@@ -12,13 +12,13 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * Registered system user — can be a CUSTOMER, STAFF, or ADMIN.
+ * Registered system user — a STAFF or ADMIN account.
  *
  * Implements Spring Security's UserDetails so it can be used directly by
  * the authentication framework. Authentication is username-based (not email).
  *
- * Guest orders do not require a User record; guests supply name/phone/email
- * directly on the order instead.
+ * Guests never have a User record; they place orders via the QR-code flow
+ * and supply name/phone/email directly on each order.
  */
 @Entity
 @Table(name = "users")

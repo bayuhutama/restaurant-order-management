@@ -98,9 +98,9 @@
  * Staff login page — split-panel layout with a branding panel on the left (desktop)
  * and the login form on the right.
  *
- * After login, explicitly checks that the authenticated user has STAFF or ADMIN role.
- * If a CUSTOMER tries to log in here, they are logged out and shown an error.
- * Redirects to /staff on success.
+ * After login, explicitly checks that the authenticated user has STAFF or
+ * ADMIN role. Non-staff accounts are logged out and shown an error. Redirects
+ * to /staff on success.
  */
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -121,7 +121,7 @@ async function handleLogin() {
   try {
     await auth.login(form.value.username, form.value.password)
 
-    // Prevent customers from accessing the staff portal
+    // Defensive: any account without STAFF/ADMIN role is refused here
     if (!auth.isStaff) {
       auth.logout()
       error.value = 'Access denied. This portal is for staff only.'

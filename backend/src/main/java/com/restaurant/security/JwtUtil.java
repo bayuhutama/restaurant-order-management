@@ -24,12 +24,10 @@ import java.util.Date;
  * - expiration: issuedAt + role-based lifetime (see {@link #lifetimeFor})
  *
  * Role-based token lifetime:
- * - ADMIN:    short lifetime to reduce the blast radius of a stolen admin
- *             token (jwt.expiration.admin, default 1h).
- * - STAFF:    long lifetime so a whole shift fits in one login
- *             (jwt.expiration.staff, default 13h).
- * - CUSTOMER: medium lifetime for guest convenience
- *             (jwt.expiration, default 8h).
+ * - ADMIN: short lifetime to reduce the blast radius of a stolen admin token
+ *          (jwt.expiration.admin, default 1h).
+ * - STAFF: long lifetime so a whole shift fits in one login
+ *          (jwt.expiration.staff, default 13h).
  *
  * Single-session enforcement:
  * The tokenVersion claim is compared against the User's current tokenVersion
@@ -42,11 +40,7 @@ public class JwtUtil {
     @Value("${jwt.secret}")
     private String secret;
 
-    /** Default token lifetime in milliseconds — used for customers. */
-    @Value("${jwt.expiration}")
-    private long defaultExpiration;
-
-    /** Staff shift-length token lifetime in milliseconds. */
+    /** Staff shift-length token lifetime in milliseconds — 13h by default. */
     @Value("${jwt.expiration.staff:46800000}")
     private long staffExpiration;
 
@@ -66,9 +60,7 @@ public class JwtUtil {
 
     /** Returns the token lifetime in milliseconds appropriate for the given role. */
     private long lifetimeFor(Role role) {
-        if (role == Role.ADMIN) return adminExpiration;
-        if (role == Role.STAFF) return staffExpiration;
-        return defaultExpiration;
+        return role == Role.ADMIN ? adminExpiration : staffExpiration;
     }
 
     /**

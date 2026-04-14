@@ -54,9 +54,9 @@ api.interceptors.response.use(
 )
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
+// Only staff and admin authenticate. Customers order as guests.
 export const authApi = {
-  login: (data) => api.post('/auth/login', data),
-  register: (data) => api.post('/auth/register', data)
+  login: (data) => api.post('/auth/login', data)
 }
 
 // ── Menu (public) ─────────────────────────────────────────────────────────────
@@ -78,8 +78,7 @@ export const orderApi = {
    */
   confirmPayment: (orderNumber, paymentToken) =>
     api.post(`/orders/${orderNumber}/pay`, { paymentToken }),
-  trackOrder: (orderNumber) => api.get(`/orders/track/${orderNumber}`),
-  myOrders: () => api.get('/orders/my')
+  trackOrder: (orderNumber) => api.get(`/orders/track/${orderNumber}`)
 }
 
 // ── Table Sessions (public) ───────────────────────────────────────────────────
