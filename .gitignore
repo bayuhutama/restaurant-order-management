@@ -5,7 +5,6 @@ backend/restaurant.db
 backend/uploads/
 backend/.mvn/wrapper/maven-wrapper.jar
 !backend/.mvn/wrapper/maven-wrapper.properties
-backend/mvnw.cmd
 
 # ===== Frontend (Node / Vite) =====
 frontend/node_modules/
@@ -55,3 +54,6 @@ desktop.ini
 *.pem
 *.key
 backend/src/main/resources/application-local.properties
+
+# ===== Claude Code local state =====
+.claude/
