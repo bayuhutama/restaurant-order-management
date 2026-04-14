@@ -69,7 +69,15 @@ public class AuthService {
         User user = userRepository.findByUsername(request.username())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        log.info("User logged in: username={}, role={}", user.getUsername(), user.getRole());
+        // Bump tokenVersion on every successful login. This invalidates any JWT
+        // previously issued to this user — enforcing single-active-session:
+        // logging in on a new device logs the old device out on its next request.
+        Long current = user.getTokenVersion();
+        user.setTokenVersion((current == null ? 0L : current) + 1L);
+        user = userRepository.save(user);
+
+        log.info("User logged in: username={}, role={}, tokenVersion={}",
+                user.getUsername(), user.getRole(), user.getTokenVersion());
 
         String token = jwtUtil.generateToken(user);
         return new AuthResponse(token, user.getId(), user.getName(), user.getUsername(), user.getRole().name());

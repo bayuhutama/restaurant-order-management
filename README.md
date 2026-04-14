@@ -156,7 +156,8 @@ All backend configuration is in `backend/src/main/resources/`.
 |---|---|---|---|
 | `jwt.secret` | `JWT_SECRET` | *(required)* | JWT signing secret, min 32 chars |
 | `jwt.expiration` | `JWT_EXPIRATION` | `28800000` (8h) | Customer token lifetime in milliseconds |
-| `jwt.expiration.staff` | `JWT_EXPIRATION_STAFF` | `46800000` (13h) | Staff/admin token lifetime — covers a full 10AM–10PM shift |
+| `jwt.expiration.staff` | `JWT_EXPIRATION_STAFF` | `46800000` (13h) | Staff token lifetime — covers a full 10AM–10PM shift |
+| `jwt.expiration.admin` | `JWT_EXPIRATION_ADMIN` | `3600000` (1h) | Admin token lifetime — short on purpose |
 | `spring.datasource.url` | `DB_URL` | `jdbc:mysql://localhost:3306/...` | Database URL |
 | `spring.datasource.username` | `DB_USERNAME` | `root` | Database username |
 | `spring.datasource.password` | `DB_PASSWORD` | *(empty)* | Database password |
@@ -242,7 +243,8 @@ src/
 ### Security
 
 - JWT passed as `Authorization: Bearer <token>`, signed with HS256 (jjwt 0.12.x, `verifyWith()` constrains algorithm to key type)
-- **Role-based token lifetime**: staff/admin tokens last 13 hours (one full shift) so kitchen/floor staff aren't logged out mid-service; customer tokens last 8 hours
+- **Role-based token lifetime**: admin tokens last **1h** (short to limit blast radius of a stolen admin token), staff tokens last **13h** (covers a full 10AM–10PM shift so floor/kitchen staff aren't logged out mid-service), customer tokens last 8h
+- **Single active session per user**: every `User` row has a `tokenVersion` counter that is incremented on each successful login and embedded as a JWT claim. `JwtAuthenticationFilter` rejects any token whose claim doesn't match the current value, so logging in on a new device logs the previous device out on its next request. Bumping the counter server-side also works as a zero-infrastructure force-logout.
 - Public endpoints: menu, order placement, order tracking, payment confirmation
 - Staff endpoints: require `ROLE_STAFF` or `ROLE_ADMIN`
 - Admin endpoints: require `ROLE_ADMIN`

@@ -19,16 +19,22 @@ import java.util.Date;
  *
  * Token structure:
  * - subject: username
+ * - tokenVersion: monotonic counter from the User row (single-session enforcement)
  * - issuedAt: current timestamp
  * - expiration: issuedAt + role-based lifetime (see {@link #lifetimeFor})
  *
- * Token lifetime is role-based:
- * - STAFF / ADMIN: long lifetime so a whole shift (e.g. 10AM–10PM) fits in one
- *   login. Configured via {@code jwt.expiration.staff} (default 13 hours).
- * - CUSTOMER (and any unauthenticated self-registered user): short lifetime
- *   configured via {@code jwt.expiration} (default 8 hours).
+ * Role-based token lifetime:
+ * - ADMIN:    short lifetime to reduce the blast radius of a stolen admin
+ *             token (jwt.expiration.admin, default 1h).
+ * - STAFF:    long lifetime so a whole shift fits in one login
+ *             (jwt.expiration.staff, default 13h).
+ * - CUSTOMER: medium lifetime for guest convenience
+ *             (jwt.expiration, default 8h).
  *
- * The signing key is derived from the jwt.secret property using HMAC-SHA256.
+ * Single-session enforcement:
+ * The tokenVersion claim is compared against the User's current tokenVersion
+ * on every authenticated request by JwtAuthenticationFilter. AuthService bumps
+ * the counter on each successful login, invalidating any prior tokens.
  */
 @Component
 public class JwtUtil {
@@ -40,11 +46,18 @@ public class JwtUtil {
     @Value("${jwt.expiration}")
     private long defaultExpiration;
 
-    /** Longer token lifetime in milliseconds — used for staff and admin shifts. */
+    /** Staff shift-length token lifetime in milliseconds. */
     @Value("${jwt.expiration.staff:46800000}")
     private long staffExpiration;
 
+    /** Short admin token lifetime in milliseconds — 1h by default. */
+    @Value("${jwt.expiration.admin:3600000}")
+    private long adminExpiration;
+
     private static final MacAlgorithm ALGORITHM = Jwts.SIG.HS256;
+
+    /** Claim name for the user's current token version — drives single-session enforcement. */
+    public static final String CLAIM_TOKEN_VERSION = "tokenVersion";
 
     /** Derives the signing key from the configured secret string. */
     private SecretKey getSigningKey() {
@@ -53,31 +66,21 @@ public class JwtUtil {
 
     /** Returns the token lifetime in milliseconds appropriate for the given role. */
     private long lifetimeFor(Role role) {
-        return (role == Role.STAFF || role == Role.ADMIN) ? staffExpiration : defaultExpiration;
+        if (role == Role.ADMIN) return adminExpiration;
+        if (role == Role.STAFF) return staffExpiration;
+        return defaultExpiration;
     }
 
     /**
      * Creates a signed JWT for a concrete {@link User}.
-     * Preferred entry point — lets the token lifetime vary by role.
+     * Preferred entry point — sets role-based lifetime and embeds tokenVersion.
      */
     public String generateToken(User user) {
         return Jwts.builder()
                 .subject(user.getUsername())
+                .claim(CLAIM_TOKEN_VERSION, user.getTokenVersion())
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + lifetimeFor(user.getRole())))
-                .signWith(getSigningKey(), ALGORITHM)
-                .compact();
-    }
-
-    /**
-     * Creates a signed JWT using the default (customer) lifetime.
-     * Kept for callers that only hold a Spring Security {@link UserDetails}.
-     */
-    public String generateToken(UserDetails userDetails) {
-        return Jwts.builder()
-                .subject(userDetails.getUsername())
-                .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + defaultExpiration))
                 .signWith(getSigningKey(), ALGORITHM)
                 .compact();
     }
@@ -87,9 +90,18 @@ public class JwtUtil {
         return getClaims(token).getSubject();
     }
 
+    /** Returns the tokenVersion claim; null if the claim is missing (legacy tokens). */
+    public Long extractTokenVersion(String token) {
+        Object v = getClaims(token).get(CLAIM_TOKEN_VERSION);
+        if (v instanceof Number n) return n.longValue();
+        return null;
+    }
+
     /**
-     * Returns true if the token's subject matches the given user and the token is not expired.
-     * Called by JwtAuthenticationFilter on every authenticated request.
+     * Returns true if the token's subject matches the given user and the token
+     * is not expired. Does NOT check tokenVersion — the filter compares that
+     * separately because it requires the concrete User entity (UserDetails
+     * does not expose tokenVersion).
      */
     public boolean isTokenValid(String token, UserDetails userDetails) {
         final String username = extractUsername(token);

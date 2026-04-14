@@ -60,9 +60,21 @@ public class User implements UserDetails {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
+    /**
+     * Monotonic counter embedded in every JWT this user receives.
+     * Incremented on each successful login — older tokens become invalid
+     * because their embedded version no longer matches the current one.
+     * Enforces single-active-session-per-user and enables admin-initiated
+     * force-logout by bumping this value server-side.
+     */
+    @Column(name = "token_version", nullable = false)
+    @Builder.Default
+    private Long tokenVersion = 0L;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
+        if (tokenVersion == null) tokenVersion = 0L;
     }
 
     /**

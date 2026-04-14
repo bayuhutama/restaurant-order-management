@@ -57,7 +57,17 @@ npm run build                # Production build
 
 JWT passed as `Authorization: Bearer <token>`. Public endpoints work without a token. Login uses **username** (not email).
 
-Token lifetime is **role-based** — see `JwtUtil.generateToken(User)`. STAFF/ADMIN get `jwt.expiration.staff` (default **13h**, enough for a 10AM–10PM shift). CUSTOMER gets `jwt.expiration` (default 8h). The `generateToken(UserDetails)` overload is kept for callers without a concrete `User` and uses the default lifetime.
+Token lifetime is **role-based** — see `JwtUtil.generateToken(User)`:
+- **ADMIN**: `jwt.expiration.admin` (default **1h**) — short to limit blast radius of a stolen admin token.
+- **STAFF**: `jwt.expiration.staff` (default **13h**) — covers a full 10AM–10PM shift.
+- **CUSTOMER**: `jwt.expiration` (default 8h).
+
+**Single-session enforcement** via a `tokenVersion` column on `User`:
+- `AuthService.login()` increments `user.tokenVersion` on every successful login and saves the user before issuing the JWT.
+- The new JWT carries the incremented value in a `tokenVersion` claim.
+- `JwtAuthenticationFilter` compares the claim against the current `User.tokenVersion` on every authenticated request; a mismatch rejects the token (does not set SecurityContext), so a new login on any device silently logs the previous device out on its next request.
+- Because the filter returns no SecurityContext on mismatch, the frontend 401 interceptor then wipes `sessionStorage` and redirects to the matching login page.
+- Bumping `tokenVersion` server-side (e.g. from an admin endpoint) is also a force-logout for that user — no session table required.
 
 Guest ordering: `POST /api/orders` is `permitAll`. Controller checks `@AuthenticationPrincipal`; if null, uses `guestName`/`guestPhone` from request body.
 

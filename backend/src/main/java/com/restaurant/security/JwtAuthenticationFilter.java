@@ -1,5 +1,6 @@
 package com.restaurant.security;
 
+import com.restaurant.model.User;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Objects;
 
 /**
  * Servlet filter that runs once per request and sets up Spring Security authentication
@@ -61,7 +63,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
-                if (jwtUtil.isTokenValid(token, userDetails)) {
+                // Single-session enforcement: compare the tokenVersion claim against the
+                // current value on the User. A mismatch means a newer login has
+                // superseded this token, so we reject it and leave the SecurityContext
+                // empty — downstream authorization will return 401/403 and the
+                // frontend's 401 interceptor will log the stale session out.
+                boolean versionOk = true;
+                if (userDetails instanceof User user) {
+                    Long claimVersion = jwtUtil.extractTokenVersion(token);
+                    versionOk = Objects.equals(claimVersion, user.getTokenVersion());
+                    if (!versionOk) {
+                        log.warn("Rejecting JWT for user={} — tokenVersion mismatch (claim={}, current={})",
+                                username, claimVersion, user.getTokenVersion());
+                    }
+                }
+
+                if (versionOk && jwtUtil.isTokenValid(token, userDetails)) {
                     UsernamePasswordAuthenticationToken authToken =
                             new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
