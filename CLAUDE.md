@@ -225,6 +225,7 @@ Seeding only runs if the user doesn't exist (`existsByUsername`). Prices are in 
 - `BadCredentialsException` → 401, generic message (prevents username enumeration).
 - `AccessDeniedException` → 403, generic message.
 - `MethodArgumentNotValidException` → 400 with field-level error map.
+- `MethodArgumentTypeMismatchException` → 400 with `"Invalid parameter: <name>"`. Catches bad path variables (e.g. `/api/menu/abc` when the endpoint expects a Long), preventing the generic 500 that would otherwise leak the internal class-cast detail.
 
 #### Backend — File Upload Security (`FileUploadService`)
 - Declared content-type must be an allowed image MIME type.

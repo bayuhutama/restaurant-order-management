@@ -219,6 +219,7 @@ src/
 | Authentication failures | 401 Unauthorized | Generic message (prevents enumeration) |
 | Authorization failures | 403 Forbidden | Generic message |
 | Validation errors (`@Valid`) | 400 Bad Request | Field-level error map |
+| Path variable type mismatch | 400 Bad Request | `"Invalid parameter: <name>"` |
 | Unexpected errors | 500 Internal Server Error | `"An unexpected error occurred"` (details logged server-side only) |
 
 ### File Upload Security
