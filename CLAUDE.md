@@ -122,7 +122,8 @@ Multiple customers at the same table place individual orders that accumulate und
 ### Frontend Structure (`frontend/src/`)
 
 - **`api/index.js`** — All Axios calls. `staffApi` includes `getOpenSessions()` and `closeSession(tableNumber)`. `tableSessionApi` has `getSession(tableNumber)` and `paySession(tableNumber, { paymentMethod })`.
-- **`stores/auth.js`** — Pinia store. Persists token + user to `localStorage`.
+- **`stores/auth.js`** — Pinia store. Persists token + user to `sessionStorage` (not `localStorage`), so staff/admin sessions end automatically when the browser or tab closes — important for shared devices like kitchen tablets. Page refreshes within the same tab still restore the session.
+- **`api/index.js`** — the shared Axios instance also installs a **global 401 response interceptor**: when the backend rejects a request with 401 (expired/revoked token), it wipes `sessionStorage` and redirects to the login page matching the current area (`/admin/login`, `/staff/login`, or `/`). 401s from `/auth/login` and `/auth/register` are excluded so wrong-password errors can be shown inline on the form instead of triggering a redirect.
 - **`stores/cart.js`** — Cart state, persisted to `localStorage`.
 - **`stores/table.js`** — `tableNumber` in `sessionStorage` (clears on tab close). `setTable(n)` / `clearTable()`.
 - **`stores/orders.js`** — Persists `[{ orderNumber, tableNumber, paymentToken }]` to `localStorage`. `addOrder(orderNumber, tableNumber, paymentToken)`, `getNumbersForTable(tableNumber)`, `removeOrder(orderNumber)`, `getTokenForOrder(orderNumber)`. Scopes order history to the current table. Token is stored here so `PaymentView` can retrieve it without a server round-trip.

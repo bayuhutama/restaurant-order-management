@@ -246,6 +246,14 @@ src/
 - Admin endpoints: require `ROLE_ADMIN`
 - Invalid tokens are rejected and logged as `WARN`
 
+#### Session lifetime (frontend)
+
+Staff and admin sessions are deliberately short-lived on the client:
+
+- **Token + user profile are stored in `sessionStorage`**, not `localStorage`. When the browser or tab closes, the session is gone — useful for shared devices like a kitchen tablet or front-of-house terminal.
+- **Global 401 interceptor** in `api/index.js`: any authenticated request that comes back with 401 (expired, revoked, or otherwise invalid token) clears `sessionStorage` and redirects to the matching login page (`/admin/login`, `/staff/login`, or `/`). Every open tab on the device hits the same interceptor on its next request, so all sessions sharing that token are logged out together.
+- 401s from `/auth/login` and `/auth/register` are excluded — they mean "wrong password" and are shown inline on the form rather than triggering a redirect.
+
 ### Error Handling
 
 `GlobalExceptionHandler` categorizes all exceptions:

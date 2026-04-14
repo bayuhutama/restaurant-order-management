@@ -4,7 +4,11 @@ import { authApi } from '@/api'
 
 /**
  * Pinia store for authentication state.
- * Token and user profile are persisted to localStorage so sessions survive page refreshes.
+ *
+ * Storage choice: sessionStorage (not localStorage). Staff and admin sessions
+ * deliberately end when the browser/tab is closed so a shared device (e.g. the
+ * kitchen tablet) does not stay logged in after the user walks away. Page
+ * refreshes within the same tab still restore the session.
  *
  * Role helpers:
  * - isAdmin: only ADMIN role
@@ -12,9 +16,8 @@ import { authApi } from '@/api'
  * - isCustomer: only CUSTOMER role
  */
 export const useAuthStore = defineStore('auth', () => {
-  // Restore session from localStorage on initialisation
-  const token = ref(localStorage.getItem('token') || null)
-  const user = ref(JSON.parse(localStorage.getItem('user') || 'null'))
+  const token = ref(sessionStorage.getItem('token') || null)
+  const user = ref(JSON.parse(sessionStorage.getItem('user') || 'null'))
 
   const isAuthenticated = computed(() => !!token.value)
   const isAdmin = computed(() => user.value?.role === 'ADMIN')
@@ -35,20 +38,20 @@ export const useAuthStore = defineStore('auth', () => {
     return res.data
   }
 
-  /** Stores token and user profile in state and localStorage. */
+  /** Stores token and user profile in state and sessionStorage. */
   function setSession(data) {
     token.value = data.token
     user.value = { id: data.id, name: data.name, username: data.username, role: data.role }
-    localStorage.setItem('token', data.token)
-    localStorage.setItem('user', JSON.stringify(user.value))
+    sessionStorage.setItem('token', data.token)
+    sessionStorage.setItem('user', JSON.stringify(user.value))
   }
 
   /** Clears session state and removes persisted data. */
   function logout() {
     token.value = null
     user.value = null
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
+    sessionStorage.removeItem('token')
+    sessionStorage.removeItem('user')
   }
 
   return { token, user, isAuthenticated, isAdmin, isStaff, isCustomer, login, register, logout }

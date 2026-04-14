@@ -9,14 +9,49 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' }
 })
 
-// Attach JWT token to every request if present in localStorage
+// Attach JWT token to every request if present in sessionStorage
 api.interceptors.request.use(config => {
-  const token = localStorage.getItem('token')
+  const token = sessionStorage.getItem('token')
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
   return config
 })
+
+/**
+ * Global 401 handler: when the backend rejects the token (expired, revoked, or
+ * signed with an outdated secret), wipe the stored session and bounce the user
+ * to the appropriate login page. This guarantees that any tab holding a stale
+ * token for a given account is logged out as soon as it tries a request.
+ *
+ * Exclusion: 401s from the login endpoint itself are NOT a session-expiry
+ * signal — they mean the user typed the wrong password. Let the caller handle
+ * those so the error message can be shown inline on the login form.
+ */
+api.interceptors.response.use(
+  response => response,
+  error => {
+    const status = error?.response?.status
+    const url = error?.config?.url || ''
+    const isLoginRequest = url.includes('/auth/login') || url.includes('/auth/register')
+
+    if (status === 401 && !isLoginRequest && sessionStorage.getItem('token')) {
+      sessionStorage.removeItem('token')
+      sessionStorage.removeItem('user')
+
+      // Redirect to the login page that matches the current area of the app.
+      // Guard against redirect loops if we are already on a login page.
+      const path = window.location.pathname
+      if (!path.endsWith('/login') && !path.includes('/login')) {
+        const target = path.startsWith('/admin') ? '/admin/login'
+                     : path.startsWith('/staff') ? '/staff/login'
+                     : '/'
+        window.location.replace(target)
+      }
+    }
+    return Promise.reject(error)
+  }
+)
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
 export const authApi = {
