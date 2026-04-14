@@ -203,19 +203,23 @@
  *
  * Confirming any method calls POST /api/orders/{orderNumber}/pay, which marks
  * the payment as PAID and allows staff to advance the order to CONFIRMED.
- * After confirmation, redirects to /my-orders.
+ * After a successful confirmation the customer sees a success dialog and is
+ * then redirected to /my-orders, where live WebSocket updates track the
+ * order's progress through the kitchen.
  */
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import QRCode from 'qrcode'
 import { orderApi } from '@/api'
 import { useOrdersStore } from '@/stores/orders'
+import { useDialog } from '@/composables/useDialog'
 import { formatRupiah } from '@/utils/format'
 import { PhWarningCircle, PhCheckCircle, PhCreditCard, PhMoney, PhQrCode } from '@phosphor-icons/vue'
 
 const route = useRoute()
 const router = useRouter()
 const ordersStore = useOrdersStore()
+const { showAlert } = useDialog()
 
 const order = ref(null)
 const loading = ref(true)
@@ -350,7 +354,17 @@ async function confirmPayment() {
     // placed the order — preventing token harvest via the public WebSocket.
     const paymentToken = ordersStore.getTokenForOrder(route.params.orderNumber)
     await orderApi.confirmPayment(route.params.orderNumber, paymentToken)
-    router.push('/my-orders')
+
+    // Show a success dialog first so the customer has explicit confirmation,
+    // then push to My Orders. Awaiting the push is important: Vue Router
+    // returns a Promise and silently swallows navigation errors; if we didn't
+    // await, the finally block would flip `paying` back off and the UI would
+    // appear frozen in place on the old PaymentView.
+    await showAlert(
+      'Your order has been sent to the kitchen. Thank you!',
+      'Payment confirmed'
+    )
+    await router.push('/my-orders')
   } catch (e) {
     payError.value = e.response?.data?.message || 'Payment failed. Please try again.'
   } finally {
