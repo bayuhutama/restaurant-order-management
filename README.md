@@ -155,7 +155,8 @@ All backend configuration is in `backend/src/main/resources/`.
 | Property | Env Variable | Default | Description |
 |---|---|---|---|
 | `jwt.secret` | `JWT_SECRET` | *(required)* | JWT signing secret, min 32 chars |
-| `jwt.expiration` | `JWT_EXPIRATION` | `28800000` (8h) | Token lifetime in milliseconds |
+| `jwt.expiration` | `JWT_EXPIRATION` | `28800000` (8h) | Customer token lifetime in milliseconds |
+| `jwt.expiration.staff` | `JWT_EXPIRATION_STAFF` | `46800000` (13h) | Staff/admin token lifetime — covers a full 10AM–10PM shift |
 | `spring.datasource.url` | `DB_URL` | `jdbc:mysql://localhost:3306/...` | Database URL |
 | `spring.datasource.username` | `DB_USERNAME` | `root` | Database username |
 | `spring.datasource.password` | `DB_PASSWORD` | *(empty)* | Database password |
@@ -241,6 +242,7 @@ src/
 ### Security
 
 - JWT passed as `Authorization: Bearer <token>`, signed with HS256 (jjwt 0.12.x, `verifyWith()` constrains algorithm to key type)
+- **Role-based token lifetime**: staff/admin tokens last 13 hours (one full shift) so kitchen/floor staff aren't logged out mid-service; customer tokens last 8 hours
 - Public endpoints: menu, order placement, order tracking, payment confirmation
 - Staff endpoints: require `ROLE_STAFF` or `ROLE_ADMIN`
 - Admin endpoints: require `ROLE_ADMIN`

@@ -57,6 +57,8 @@ npm run build                # Production build
 
 JWT passed as `Authorization: Bearer <token>`. Public endpoints work without a token. Login uses **username** (not email).
 
+Token lifetime is **role-based** — see `JwtUtil.generateToken(User)`. STAFF/ADMIN get `jwt.expiration.staff` (default **13h**, enough for a 10AM–10PM shift). CUSTOMER gets `jwt.expiration` (default 8h). The `generateToken(UserDetails)` overload is kept for callers without a concrete `User` and uses the default lifetime.
+
 Guest ordering: `POST /api/orders` is `permitAll`. Controller checks `@AuthenticationPrincipal`; if null, uses `guestName`/`guestPhone` from request body.
 
 ### Payment Flow
