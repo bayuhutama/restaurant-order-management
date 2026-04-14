@@ -2,21 +2,48 @@
 
 A full-stack **dine-in** restaurant order management system. Customers scan a QR code at their table, browse the menu, and place orders. Staff manage orders in real time. Admins control the menu, categories, and tables.
 
+> **No delivery, no takeaway.** Savoria is built for the in-restaurant experience: sit down, scan, order, eat, pay.
+
+---
+
+## Quick Start (TL;DR)
+
+For developers who just want to run the project locally:
+
+```bash
+# 1. Create the MySQL database
+mysql -u root -p -e "CREATE DATABASE \`restaurant-order-management\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+
+# 2. Configure the backend (edit DB password + JWT secret)
+cp backend/src/main/resources/application-local.properties.example \
+   backend/src/main/resources/application-local.properties
+
+# 3. Run the backend (port 8080)
+cd backend && ./mvnw spring-boot:run
+
+# 4. Run the frontend (port 5173) — in a separate terminal
+cd frontend && npm install && npm run dev
+```
+
+Open **http://localhost:5173** — log in as `admin / Admin123!` or `staff / Staff123!`.
+
 ---
 
 ## Table of Contents
 
+- [Quick Start (TL;DR)](#quick-start-tldr)
 - [Tech Stack](#tech-stack)
-- [Getting Started](#getting-started)
+- [Getting Started](#getting-started) — step-by-step setup
 - [Configuration](#configuration)
 - [User Roles](#user-roles)
 - [Features](#features)
-- [Architecture](#architecture)
-- [Database (RDBMS)](#database-rdbms)
+- [Architecture](#architecture) — backend + frontend structure, security, WebSocket
+- [Database (RDBMS)](#database-rdbms) — ERD and table schemas
 - [API Reference](#api-reference)
 - [Frontend Routes](#frontend-routes)
-- [Flows](#flows)
+- [Flows](#flows) — order, payment, table session
 - [Design Patterns](#design-patterns)
+- [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -24,8 +51,9 @@ A full-stack **dine-in** restaurant order management system. Customers scan a QR
 
 | Layer | Technologies |
 |---|---|
-| Backend | Spring Boot 3.2.3, Java 17, MySQL 8.0, JWT (jjwt 0.12.5), WebSocket (STOMP) |
-| Frontend | Vue 3, Vite, Tailwind CSS, Pinia, Vue Router, Axios, @stomp/stompjs |
+| **Backend** | Spring Boot 3.2.3, Java 17, MySQL 8.0, JWT (jjwt 0.12.5), WebSocket (STOMP), Spring Security, Spring Data JPA, Lombok |
+| **Frontend** | Vue 3 (Composition API), Vite, Tailwind CSS, Pinia, Vue Router, Axios, @stomp/stompjs, qrcode, @phosphor-icons/vue |
+| **Build** | Maven (`./mvnw` wrapper), npm |
 
 ---
 
@@ -35,10 +63,12 @@ A full-stack **dine-in** restaurant order management system. Customers scan a QR
 
 Make sure the following are installed before running the project:
 
-- **Java 17+**
-- **Node.js 18+**
-- **MySQL 8.0**
-- **Maven** (or use the included `./mvnw` wrapper)
+| Tool | Version | Check |
+|---|---|---|
+| Java | 17+ | `java -version` |
+| Node.js | 18+ | `node -v` |
+| MySQL | 8.0 | `mysql --version` |
+| Maven | (optional — `./mvnw` wrapper included) | `mvn -v` |
 
 ### 1. Clone the repository
 
@@ -49,7 +79,7 @@ cd restaurant-order-management
 
 ### 2. Set up the database
 
-Log in to MySQL and create the database:
+Log in to MySQL and create the database (schema is auto-created by Hibernate on first run):
 
 ```sql
 CREATE DATABASE `restaurant-order-management`
@@ -59,21 +89,21 @@ CREATE DATABASE `restaurant-order-management`
 
 ### 3. Configure the backend
 
-Create a local properties file (this file is gitignored):
+Create a local properties file (gitignored — keeps your credentials out of git):
 
 ```bash
 cp backend/src/main/resources/application-local.properties.example \
    backend/src/main/resources/application-local.properties
 ```
 
-Then edit `application-local.properties` and set your values:
+Edit `application-local.properties` and set at least:
 
 ```properties
 spring.datasource.password=your_mysql_password
 jwt.secret=your-secret-key-at-least-32-characters-long
 ```
 
-> See [Configuration](#configuration) for all available options.
+> See [Configuration](#configuration) for the complete list of options.
 
 ### 4. Start the backend
 
@@ -85,16 +115,17 @@ cd backend
 The backend starts on **http://localhost:8080**.
 
 On first run, `DataInitializer` automatically seeds:
-- Default admin and staff accounts
-- Sample menu categories and items
+- Default **admin** account (`admin / Admin123!`)
+- Default **staff** account (`staff / Staff123!`)
+- Sample menu categories and items (prices in IDR)
 
-> **Security note:** Default account credentials are defined in `DataInitializer.java`. Change them before any non-local deployment.
+> **Security note:** Default credentials are defined in `DataInitializer.java`. **Change them before any non-local deployment.**
 
 ### 5. Start the frontend
 
 ```bash
 cd frontend
-npm install
+npm install         # first time only
 npm run dev
 ```
 
@@ -102,11 +133,18 @@ The frontend starts on **http://localhost:5173**.
 
 ### 6. Open the app
 
-| Role | URL |
-|---|---|
-| Customer | http://localhost:5173 |
-| Staff | http://localhost:5173/staff/login |
-| Admin | http://localhost:5173/admin/login |
+| Role | URL | Credentials |
+|---|---|---|
+| Customer (guest) | http://localhost:5173 | none — scan `/?table=1` to simulate a QR scan |
+| Staff | http://localhost:5173/staff/login | `staff / Staff123!` |
+| Admin | http://localhost:5173/admin/login | `admin / Admin123!` |
+
+### 7. Try it end-to-end
+
+1. Visit **http://localhost:5173/?table=5** — simulates scanning a QR at table 5.
+2. Add items to the cart, go through checkout, and pick a payment method.
+3. Open **http://localhost:5173/staff** in another window — you'll see the new order appear in real time via WebSocket.
+4. Advance it: Confirm → Preparing → Ready → Delivered.
 
 ---
 
@@ -516,3 +554,18 @@ PENDING → CONFIRMED → PREPARING → READY → DELIVERED
 | **Singleton** | `useDialog` — module-level state shared as a singleton across all components |
 | **Facade** | `api/index.js` — wraps all Axios calls behind named functions (`staffApi`, `tableSessionApi`, etc.) |
 | **Router Guard** | `router/index.js` navigation guards — controls route access per role |
+
+---
+
+## Troubleshooting
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| `Access denied for user 'root'@'localhost'` on backend start | Wrong DB password | Update `spring.datasource.password` in `application-local.properties` |
+| `Unknown database 'restaurant-order-management'` | DB not created | Run the `CREATE DATABASE` statement in [step 2](#2-set-up-the-database) |
+| Backend starts but frontend shows CORS errors | Frontend running on a non-default port | Set `app.cors.allowed-origins` to include your origin |
+| `global is not defined` in browser console | Vite missing SockJS shim | Already configured via `define: { global: 'globalThis' }` in `vite.config.js` — restart `npm run dev` |
+| Staff dashboard doesn't receive live updates | WebSocket blocked or backend not running | Check `ws://localhost:8080/ws` is reachable; verify JWT on the staff session |
+| `JWT secret must be at least 32 characters` | Weak `jwt.secret` | Use a longer secret (e.g. generate with `openssl rand -base64 48`) |
+| Uploaded image 404s | Wrong `app.base-url` or `upload.dir` | Ensure `upload.dir` exists and `app.base-url` matches the backend origin |
+| Port 8080 / 5173 already in use | Another process holds the port | `lsof -i :8080` (macOS/Linux) or `netstat -ano | findstr :8080` (Windows), then kill or change port |
