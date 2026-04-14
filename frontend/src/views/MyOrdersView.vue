@@ -34,7 +34,7 @@
 
     <!-- Loading -->
     <div v-else-if="loading" class="space-y-4">
-      <div v-for="n in orderNumbers.length" :key="n" class="card p-5 animate-pulse">
+      <div v-for="n in 2" :key="n" class="card p-5 animate-pulse">
         <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-32 mb-3"></div>
         <div class="h-3 bg-gray-100 dark:bg-gray-800 rounded w-48"></div>
       </div>
