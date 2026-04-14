@@ -242,6 +242,8 @@ src/
 | `/topic/orders/{orderNumber}` | Customer order tracking page | Updates for one specific order |
 | `/topic/table/{tableNumber}` | Customer "My Orders" page | All events for a table — keeps every device at the same table in sync |
 
+On the client, subscriptions go through `useWebSocket`'s `subscribe()` helper rather than `client.subscribe()` directly. The helper registers every subscription in an internal array so `disconnect()` can unsubscribe each one explicitly on component unmount — preventing leaks on rapid navigation or remount.
+
 ### Table Sessions
 
 Each table has a `TableSession` that accumulates orders from multiple customers. Sessions expire automatically after 60 minutes of inactivity (configurable). Staff can also close a session manually.
