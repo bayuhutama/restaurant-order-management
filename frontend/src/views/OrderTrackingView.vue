@@ -201,7 +201,7 @@ function isActive(status) {
   return order.value?.status === status
 }
 
-const { connect } = useWebSocket()
+const { connect, subscribe } = useWebSocket()
 
 async function loadOrder() {
   loading.value = true
@@ -218,10 +218,11 @@ async function loadOrder() {
 
 onMounted(() => {
   loadOrder()
-  connect((client) => {
-    client.subscribe(`/topic/orders/${route.params.orderNumber}`, (message) => {
-      try { order.value = JSON.parse(message.body) }
-      catch (e) { console.error('Failed to parse order tracking update:', e) }
+  connect(() => {
+    // Subscribe via the composable so the subscription is tracked and cleaned up
+    // on unmount — using client.subscribe() directly would bypass cleanup tracking.
+    subscribe(`/topic/orders/${route.params.orderNumber}`, (updated) => {
+      order.value = updated
     })
   })
 })

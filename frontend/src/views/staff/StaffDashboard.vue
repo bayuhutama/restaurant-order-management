@@ -401,7 +401,7 @@ function timeAgo(dt) {
 
 // ── Data loading ───────────────────────────────────────────────────────────────
 
-const { connect } = useWebSocket()
+const { connect, subscribe } = useWebSocket()
 
 async function loadOrders() {
   loading.value = true
@@ -464,13 +464,11 @@ let _sessionPollInterval = null
 onMounted(() => {
   refresh()
 
-  connect((client) => {
+  connect(() => {
     wsConnected.value = true
-    // Subscribe to all order updates — update existing orders in-place or prepend new ones
-    client.subscribe('/topic/orders', (message) => {
-      let updated
-      try { updated = JSON.parse(message.body) }
-      catch (e) { console.error('Failed to parse order update:', e); return }
+    // Subscribe via the composable so the subscription is tracked and cleaned up
+    // on unmount — using client.subscribe() directly would bypass cleanup tracking.
+    subscribe('/topic/orders', (updated) => {
       const idx = orders.value.findIndex(o => o.id === updated.id)
       if (idx !== -1) {
         orders.value[idx] = updated  // update existing order card

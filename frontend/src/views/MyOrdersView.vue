@@ -161,7 +161,7 @@ function upsertOrder(updated) {
   }
 }
 
-const { connect } = useWebSocket()
+const { connect, subscribe } = useWebSocket()
 
 async function loadOrders() {
   if (!tableStore.tableNumber) { loading.value = false; return }
@@ -182,13 +182,11 @@ async function loadOrders() {
 onMounted(() => {
   loadOrders()
 
-  connect((client) => {
+  connect(() => {
     if (!tableStore.tableNumber) return
-    // Subscribe to the shared table topic so all devices stay in sync in real time
-    client.subscribe(`/topic/table/${tableStore.tableNumber}`, (message) => {
-      try { upsertOrder(JSON.parse(message.body)) }
-      catch (e) { console.error('Failed to parse table order update:', e) }
-    })
+    // Subscribe via the composable so the subscription is tracked and cleaned up
+    // on unmount — using client.subscribe() directly would bypass cleanup tracking.
+    subscribe(`/topic/table/${tableStore.tableNumber}`, upsertOrder)
   })
 })
 </script>

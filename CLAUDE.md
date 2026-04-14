@@ -126,7 +126,7 @@ Multiple customers at the same table place individual orders that accumulate und
 - **`stores/cart.js`** — Cart state, persisted to `localStorage`.
 - **`stores/table.js`** — `tableNumber` in `sessionStorage` (clears on tab close). `setTable(n)` / `clearTable()`.
 - **`stores/orders.js`** — Persists `[{ orderNumber, tableNumber, paymentToken }]` to `localStorage`. `addOrder(orderNumber, tableNumber, paymentToken)`, `getNumbersForTable(tableNumber)`, `removeOrder(orderNumber)`, `getTokenForOrder(orderNumber)`. Scopes order history to the current table. Token is stored here so `PaymentView` can retrieve it without a server round-trip.
-- **`composables/useWebSocket.js`** — Wraps `@stomp/stompjs` Client. Auto-disconnects on unmount. Guards against duplicate clients on rapid remounts (`connect()` is a no-op if a client already exists). `subscribe()` wraps `JSON.parse` in try/catch. Views that use `client.subscribe()` directly (in the `onConnected` callback) must also wrap `JSON.parse` in try/catch.
+- **`composables/useWebSocket.js`** — Wraps `@stomp/stompjs` Client. Auto-disconnects on unmount. Guards against duplicate clients on rapid remounts (`connect()` is a no-op if a client already exists). `subscribe()` tracks each subscription in an internal array, parses JSON safely (try/catch), and unsubscribes everything on `disconnect()`. **All views must use the composable's `subscribe()` — never call `client.subscribe()` directly**, as that bypasses the tracked-cleanup mechanism.
 - **`composables/useDialog.js`** — Module-level singleton for custom alert/confirm dialogs. Returns promises. `showAlert(message, title)` and `showConfirm(message, title, variant)`. Replaces all native `alert()`/`confirm()` calls.
 - **`components/AppDialog.vue`** — The dialog UI. Mounted in `App.vue` via `<Teleport to="body">`. Reads from `useDialog` state. Two variants: `alert` (OK button) and `confirm` (Cancel + Confirm). `danger` variant uses red styling.
 - **`components/Modal.vue`** — Reusable modal for admin CRUD forms.
@@ -237,7 +237,7 @@ Seeding only runs if the user doesn't exist (`existsByUsername`). Prices are in 
 #### Frontend — WebSocket Resilience
 - `useWebSocket.connect()` guards against duplicate clients on rapid remounts.
 - `useWebSocket.subscribe()` wraps `JSON.parse` in try/catch so malformed messages don't crash handlers.
-- All direct `client.subscribe()` calls in views (StaffDashboard, MyOrdersView, OrderTrackingView) also include JSON.parse error handling.
+- Views (StaffDashboard, MyOrdersView, OrderTrackingView) subscribe via the composable's `subscribe()` so each subscription is registered in the tracked array and torn down on unmount.
 - `disconnect()` resets `client.value` to null and clears the subscriptions array, allowing clean reconnection.
 
 ### Order Status Flow
