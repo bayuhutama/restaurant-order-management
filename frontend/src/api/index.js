@@ -127,8 +127,12 @@ export const adminMenuApi = {
 
 // ── Admin - Orders (ADMIN role required) ──────────────────────────────────────
 export const adminOrderApi = {
-  /** Returns all orders including AWAITING_PAYMENT. */
-  getAll: () => api.get('/admin/orders'),
+  /**
+   * Returns a page of orders including AWAITING_PAYMENT.
+   * @param page  zero-based page index (default 0)
+   * @param size  number of orders per page (default 20)
+   */
+  getAll: (page = 0, size = 20) => api.get('/admin/orders', { params: { page, size, sort: 'createdAt,desc' } }),
   updateStatus: (id, status) => api.patch(`/admin/orders/${id}/status`, { status })
 }
 

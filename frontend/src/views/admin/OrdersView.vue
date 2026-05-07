@@ -83,6 +83,41 @@
           </tbody>
         </table>
       </div>
+
+      <!-- Pagination controls -->
+      <div class="flex items-center justify-between px-4 py-3 border-t dark:border-gray-700 text-sm">
+        <span class="text-gray-500 dark:text-gray-400">
+          {{ totalElements === 0 ? 'No orders' : `${pageStart}–${pageEnd} of ${totalElements} orders` }}
+        </span>
+        <div class="flex items-center gap-2">
+          <select
+            :value="pageSize"
+            @change="changePageSize(Number($event.target.value))"
+            class="text-xs border dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-700 dark:text-gray-200"
+          >
+            <option value="10">10 / page</option>
+            <option value="20">20 / page</option>
+            <option value="50">50 / page</option>
+          </select>
+          <button
+            @click="goToPage(currentPage - 1)"
+            :disabled="currentPage === 0"
+            class="px-3 py-1 rounded border dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            ‹ Prev
+          </button>
+          <span class="text-gray-600 dark:text-gray-300 min-w-[80px] text-center">
+            Page {{ currentPage + 1 }} of {{ totalPages }}
+          </span>
+          <button
+            @click="goToPage(currentPage + 1)"
+            :disabled="currentPage >= totalPages - 1"
+            class="px-3 py-1 rounded border dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Next ›
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -91,8 +126,8 @@
 /**
  * Admin orders view — full order list including AWAITING_PAYMENT (hidden from staff).
  * Admins can set any status including CANCELLED via the inline status dropdown.
- * Search filters by order number, customer name, phone, or table number (client-side).
- * Manual refresh button reloads the list from the server.
+ * Paginated server-side; search filters the current page client-side.
+ * Manual refresh reloads the current page from the server.
  */
 import { ref, computed, onMounted } from 'vue'
 import { adminOrderApi } from '@/api'
@@ -106,7 +141,16 @@ const loading = ref(true)
 const searchQuery = ref('')
 const { showAlert } = useDialog()
 
-/** Client-side filter by order number, customer name, phone, or table number. */
+/** Pagination state populated from the Spring Data Page response. */
+const currentPage = ref(0)
+const pageSize = ref(20)
+const totalPages = ref(0)
+const totalElements = ref(0)
+
+const pageStart = computed(() => totalElements.value === 0 ? 0 : currentPage.value * pageSize.value + 1)
+const pageEnd = computed(() => Math.min((currentPage.value + 1) * pageSize.value, totalElements.value))
+
+/** Client-side filter scoped to the current page. */
 const filteredOrders = computed(() => {
   if (!searchQuery.value.trim()) return orders.value
   const q = searchQuery.value.trim().toLowerCase()
@@ -121,11 +165,28 @@ const filteredOrders = computed(() => {
 async function load() {
   loading.value = true
   try {
-    const res = await adminOrderApi.getAll()
-    orders.value = res.data
+    const res = await adminOrderApi.getAll(currentPage.value, pageSize.value)
+    // Spring Data Page response: { content, totalPages, totalElements, ... }
+    orders.value = res.data.content
+    totalPages.value = res.data.totalPages
+    totalElements.value = res.data.totalElements
   } finally {
     loading.value = false
   }
+}
+
+function goToPage(page) {
+  if (page < 0 || page >= totalPages.value) return
+  currentPage.value = page
+  searchQuery.value = ''
+  load()
+}
+
+function changePageSize(size) {
+  pageSize.value = size
+  currentPage.value = 0
+  searchQuery.value = ''
+  load()
 }
 
 async function updateStatus(orderId, status) {

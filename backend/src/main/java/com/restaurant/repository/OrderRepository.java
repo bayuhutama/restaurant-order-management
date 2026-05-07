@@ -9,6 +9,8 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import java.util.List;
 import java.util.Optional;
 
@@ -61,11 +63,11 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Order> findByUserIdOrderByCreatedAtDesc(Long userId);
 
     /**
-     * Returns all orders in the system, newest first — used by the admin panel.
+     * Returns a page of all orders in the system, newest first — used by the admin panel.
      * EntityGraph avoids N+1 when mapToResponse() accesses items, payment, and user.
      */
     @EntityGraph(attributePaths = {"items", "payment", "user"})
-    List<Order> findAllByOrderByCreatedAtDesc();
+    Page<Order> findAllByOrderByCreatedAtDesc(Pageable pageable);
 
     /**
      * Returns orders whose status is in the given set, newest first.

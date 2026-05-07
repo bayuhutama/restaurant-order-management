@@ -13,7 +13,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 /**
  * Admin-only endpoints for managing menu content and orders.
@@ -76,10 +77,10 @@ public class AdminController {
 
     // ── Orders ───────────────────────────────────────────────────────────────
 
-    /** Returns all orders including AWAITING_PAYMENT — visible only to admins. */
+    /** Returns a page of all orders including AWAITING_PAYMENT — visible only to admins. */
     @GetMapping("/orders")
-    public ResponseEntity<List<OrderResponse>> getAllOrders() {
-        return ResponseEntity.ok(orderService.getAllOrders());
+    public ResponseEntity<Page<OrderResponse>> getAllOrders(Pageable pageable) {
+        return ResponseEntity.ok(orderService.getAllOrders(pageable));
     }
 
     /** Allows admins to set any status, including CANCELLED. */

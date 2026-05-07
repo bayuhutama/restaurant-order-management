@@ -8,6 +8,8 @@ import com.restaurant.model.enums.PaymentStatus;
 import com.restaurant.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -200,10 +202,10 @@ public class OrderService {
                 .stream().map(orderMapper::mapToResponse).toList();
     }
 
-    /** All orders including AWAITING_PAYMENT — for admin only. */
-    public List<OrderResponse> getAllOrders() {
-        return orderRepository.findAllByOrderByCreatedAtDesc()
-                .stream().map(orderMapper::mapToResponse).toList();
+    /** All orders including AWAITING_PAYMENT — for admin only. Paginated for the admin panel. */
+    public Page<OrderResponse> getAllOrders(Pageable pageable) {
+        return orderRepository.findAllByOrderByCreatedAtDesc(pageable)
+                .map(orderMapper::mapToResponse);
     }
 
     /** Orders visible to staff — excludes AWAITING_PAYMENT (legacy status). */
