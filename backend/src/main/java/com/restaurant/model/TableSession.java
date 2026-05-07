@@ -26,7 +26,9 @@ import java.util.List;
         // status alone is used by the scheduler and getOpenSessions()
         @Index(name = "idx_table_sessions_status", columnList = "status")
 })
-@Data
+@Getter
+@Setter
+@ToString(exclude = {"orders"})
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -76,4 +78,17 @@ public class TableSession {
         lastActivityAt = LocalDateTime.now();
         status = TableSessionStatus.OPEN;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof TableSession that)) return false;
+        return id != null && id.equals(that.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
+    }
 }
+

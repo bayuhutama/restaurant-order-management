@@ -8,13 +8,10 @@ import com.restaurant.model.enums.PaymentStatus;
 import com.restaurant.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.restaurant.dto.order.PaymentConfirmRequest;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -49,13 +46,8 @@ public class OrderService {
     private final PaymentRepository paymentRepository;
     private final SimpMessagingTemplate messagingTemplate;
 
-    // Injected lazily to break the circular dependency with TableSessionService
-    private TableSessionService tableSessionService;
-
-    @Autowired
-    public void setTableSessionService(@Lazy TableSessionService tableSessionService) {
-        this.tableSessionService = tableSessionService;
-    }
+    private final TableSessionService tableSessionService;
+    private final com.restaurant.mapper.OrderMapper orderMapper;
 
     /**
      * Creates the order in PENDING state and assigns it to a table session.
@@ -72,7 +64,7 @@ public class OrderService {
                     .orElseThrow(() -> new RuntimeException("Menu item not found: " + itemReq.menuItemId()));
 
             if (!menuItem.isAvailable()) {
-                throw new RuntimeException("Menu item is not available: " + menuItem.getName());
+                throw new com.restaurant.exception.BusinessException("Menu item is not available: " + menuItem.getName());
             }
 
             OrderItem orderItem = OrderItem.builder()
@@ -102,14 +94,13 @@ public class OrderService {
         order.setGuestPhone(request.guestPhone());
         order.setGuestEmail(request.guestEmail());
 
-        Order savedOrder = orderRepository.save(order);
-
-        // Link items to the saved order and persist them
+        // Link items to the saved order and cascade persist them
         for (OrderItem item : items) {
-            item.setOrder(savedOrder);
+            item.setOrder(order);
         }
-        List<OrderItem> savedItems = orderItemRepository.saveAll(items);
-        savedOrder.setItems(savedItems);
+        order.setItems(items);
+
+        Order savedOrder = orderRepository.save(order);
 
         // Create the payment record in PENDING state.
         // A unique paymentToken is generated here and returned only to this HTTP caller
@@ -134,7 +125,7 @@ public class OrderService {
                 savedOrder.getOrderNumber(), request.tableNumber(), items.size(), total);
 
         // Broadcast to staff WITHOUT the payment token — token is only for the customer
-        OrderResponse broadcastResponse = mapToResponse(savedOrder);
+        OrderResponse broadcastResponse = orderMapper.mapToResponse(savedOrder);
         broadcast(broadcastResponse);
 
         // Return to the HTTP caller WITH the token so the customer can store it
@@ -143,13 +134,7 @@ public class OrderService {
                 savedPayment.getId(), savedPayment.getMethod(), savedPayment.getStatus(),
                 savedPayment.getAmount(), savedPayment.getTransactionId(), savedPayment.getPaidAt(),
                 savedPayment.getPaymentToken());
-        return new OrderResponse(
-                broadcastResponse.id(), broadcastResponse.orderNumber(),
-                broadcastResponse.customerName(), broadcastResponse.customerPhone(),
-                broadcastResponse.customerEmail(), broadcastResponse.status(),
-                broadcastResponse.totalAmount(), broadcastResponse.notes(),
-                broadcastResponse.tableNumber(), broadcastResponse.items(),
-                paymentWithToken, broadcastResponse.createdAt(), broadcastResponse.updatedAt());
+        return broadcastResponse.withPayment(paymentWithToken);
     }
 
     /**
@@ -170,18 +155,18 @@ public class OrderService {
 
         Payment payment = order.getPayment();
         if (payment == null) {
-            throw new RuntimeException("Payment record not found");
+            throw new com.restaurant.exception.NotFoundException("Payment record not found");
         }
 
         // Validate the token if one is stored (null means legacy order — skip check).
         // Uses a generic error message to avoid confirming whether a token exists,
         // which would help an attacker distinguish valid from invalid order numbers.
         if (payment.getPaymentToken() != null && !payment.getPaymentToken().equals(paymentToken)) {
-            throw new RuntimeException("Payment confirmation failed");
+            throw new com.restaurant.exception.BusinessException("Payment confirmation failed");
         }
 
         if (payment.getStatus() == PaymentStatus.PAID) {
-            throw new RuntimeException("Order has already been paid");
+            throw new com.restaurant.exception.BusinessException("Order has already been paid");
         }
 
         payment.setStatus(PaymentStatus.PAID);
@@ -189,12 +174,10 @@ public class OrderService {
         payment.setPaidAt(LocalDateTime.now());
         paymentRepository.save(payment);
 
-        Order saved = orderRepository.save(order);
-        saved.setPayment(payment);
+        order.setPayment(payment);
+        log.info("Payment confirmed: orderNumber={}, txnId={}", order.getOrderNumber(), payment.getTransactionId());
 
-        log.info("Payment confirmed: orderNumber={}, txnId={}", saved.getOrderNumber(), payment.getTransactionId());
-
-        OrderResponse response = mapToResponse(saved);
+        OrderResponse response = orderMapper.mapToResponse(order);
         broadcast(response);
 
         return response;
@@ -202,26 +185,32 @@ public class OrderService {
 
     public OrderResponse getOrderByNumber(String orderNumber) {
         Order order = orderRepository.findByOrderNumber(orderNumber)
-                .orElseThrow(() -> new RuntimeException("Order not found: " + orderNumber));
-        return mapToResponse(order);
+                .orElseThrow(() -> new com.restaurant.exception.NotFoundException("Order not found: " + orderNumber));
+        return orderMapper.mapToResponse(order);
+    }
+
+    public OrderResponse getOrderById(Long id) {
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new com.restaurant.exception.NotFoundException("Order not found"));
+        return orderMapper.mapToResponse(order);
     }
 
     public List<OrderResponse> getMyOrders(Long userId) {
         return orderRepository.findByUserIdOrderByCreatedAtDesc(userId)
-                .stream().map(this::mapToResponse).toList();
+                .stream().map(orderMapper::mapToResponse).toList();
     }
 
     /** All orders including AWAITING_PAYMENT — for admin only. */
     public List<OrderResponse> getAllOrders() {
         return orderRepository.findAllByOrderByCreatedAtDesc()
-                .stream().map(this::mapToResponse).toList();
+                .stream().map(orderMapper::mapToResponse).toList();
     }
 
     /** Orders visible to staff — excludes AWAITING_PAYMENT (legacy status). */
     public List<OrderResponse> getStaffOrders() {
         return orderRepository.findByStatusNotInOrderByCreatedAtDesc(
                         List.of(OrderStatus.AWAITING_PAYMENT))
-                .stream().map(this::mapToResponse).toList();
+                .stream().map(orderMapper::mapToResponse).toList();
     }
 
     /** Active orders for staff dashboard (in-progress only — not delivered or cancelled). */
@@ -231,7 +220,7 @@ public class OrderService {
                 OrderStatus.PREPARING, OrderStatus.READY
         );
         return orderRepository.findByStatusInOrderByCreatedAtDesc(activeStatuses)
-                .stream().map(this::mapToResponse).toList();
+                .stream().map(orderMapper::mapToResponse).toList();
     }
 
     /**
@@ -253,12 +242,12 @@ public class OrderService {
         // Pessimistic write lock prevents two concurrent status-advance requests from
         // both reading the same current status and racing through the transition check.
         Order order = orderRepository.findByIdForUpdate(id)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
+                .orElseThrow(() -> new com.restaurant.exception.NotFoundException("Order not found"));
 
         // Validate the requested transition is legal
         Set<OrderStatus> allowed = VALID_TRANSITIONS.getOrDefault(order.getStatus(), Set.of());
         if (!allowed.contains(newStatus)) {
-            throw new RuntimeException(
+            throw new com.restaurant.exception.BusinessException(
                     "Cannot transition order from " + order.getStatus() + " to " + newStatus);
         }
 
@@ -266,7 +255,7 @@ public class OrderService {
         if (order.getStatus() == OrderStatus.PENDING && newStatus == OrderStatus.CONFIRMED) {
             Payment payment = order.getPayment();
             if (payment == null || payment.getStatus() != PaymentStatus.PAID) {
-                throw new RuntimeException("Cannot confirm order: payment has not been received");
+                throw new com.restaurant.exception.BusinessException("Cannot confirm order: payment has not been received");
             }
         }
 
@@ -283,7 +272,7 @@ public class OrderService {
         }
 
         Order saved = orderRepository.save(order);
-        OrderResponse response = mapToResponse(saved);
+        OrderResponse response = orderMapper.mapToResponse(saved);
         broadcast(response);
 
         return response;
@@ -303,53 +292,7 @@ public class OrderService {
         messagingTemplate.convertAndSend("/topic/table/" + response.tableNumber(), response);
     }
 
-    // ── Mapper ───────────────────────────────────────────────────────────────
 
-    /**
-     * Maps an Order entity to its response DTO.
-     * Resolves customer identity: prefers User fields, falls back to guest fields.
-     * Public so StaffController can call it directly for single-order lookups.
-     */
-    public OrderResponse mapToResponse(Order order) {
-        List<OrderItem> items = order.getItems() != null ? order.getItems() : List.of();
-
-        List<OrderItemResponse> itemResponses = items.stream().map(item ->
-                new OrderItemResponse(
-                        item.getId(),
-                        item.getMenuItem().getId(),
-                        item.getMenuItem().getName(),
-                        item.getMenuItem().getImageUrl(),
-                        item.getQuantity(),
-                        item.getUnitPrice(),
-                        item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())),
-                        item.getNotes()
-                )
-        ).toList();
-
-        PaymentResponse paymentResponse = null;
-        if (order.getPayment() != null) {
-            Payment p = order.getPayment();
-            // paymentToken is deliberately null here — it must not appear in WebSocket
-            // broadcasts or subsequent read responses; only the initial placeOrder()
-            // caller receives it (see placeOrder() for the one-time token injection).
-            paymentResponse = new PaymentResponse(p.getId(), p.getMethod(), p.getStatus(),
-                    p.getAmount(), p.getTransactionId(), p.getPaidAt(), null);
-        }
-
-        // Prefer registered user data; fall back to guest fields for unauthenticated orders
-        String customerName  = order.getUser() != null ? order.getUser().getName()  : order.getGuestName();
-        String customerPhone = order.getUser() != null ? order.getUser().getPhone() : order.getGuestPhone();
-        String customerEmail = order.getUser() != null ? order.getUser().getEmail() : order.getGuestEmail();
-
-        return new OrderResponse(
-                order.getId(), order.getOrderNumber(),
-                customerName, customerPhone, customerEmail,
-                order.getStatus(), order.getTotalAmount(),
-                order.getNotes(), order.getTableNumber(),
-                itemResponses, paymentResponse,
-                order.getCreatedAt(), order.getUpdatedAt()
-        );
-    }
 
     /**
      * Generates a human-readable order number in the format ORD-YYYYMMDD-XXXXXX.
@@ -357,7 +300,8 @@ public class OrderService {
      */
     private String generateOrderNumber() {
         String date = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
-        String random = UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+        // 8 chars = 4 billion+ values to reduce collision risk
+        String random = UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
         return "ORD-" + date + "-" + random;
     }
 }

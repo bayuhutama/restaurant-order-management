@@ -57,20 +57,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         final String token = authHeader.substring(7);
 
         try {
-            final String username = jwtUtil.extractUsername(token);
+            // Parse and verify token once
+            io.jsonwebtoken.Claims claims = jwtUtil.parseToken(token);
+            final String username = claims.getSubject();
 
             // Only authenticate if not already authenticated (avoids redundant DB calls)
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
-                // Single-session enforcement: compare the tokenVersion claim against the
-                // current value on the User. A mismatch means a newer login has
-                // superseded this token, so we reject it and leave the SecurityContext
-                // empty — downstream authorization will return 401/403 and the
-                // frontend's 401 interceptor will log the stale session out.
+                // Single-session enforcement
                 boolean versionOk = true;
                 if (userDetails instanceof User user) {
-                    Long claimVersion = jwtUtil.extractTokenVersion(token);
+                    Object v = claims.get(JwtUtil.CLAIM_TOKEN_VERSION);
+                    Long claimVersion = (v instanceof Number n) ? n.longValue() : null;
                     versionOk = Objects.equals(claimVersion, user.getTokenVersion());
                     if (!versionOk) {
                         log.warn("Rejecting JWT for user={} — tokenVersion mismatch (claim={}, current={})",
@@ -78,7 +77,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     }
                 }
 
-                if (versionOk && jwtUtil.isTokenValid(token, userDetails)) {
+                // Check username matches and expiry
+                boolean valid = username.equals(userDetails.getUsername()) && !claims.getExpiration().before(new java.util.Date());
+
+                if (versionOk && valid) {
                     UsernamePasswordAuthenticationToken authToken =
                             new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));

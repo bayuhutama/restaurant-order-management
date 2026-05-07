@@ -53,11 +53,11 @@ public class FileUploadService {
         // Validate declared content-type first
         String contentType = file.getContentType();
         if (contentType == null || !ALLOWED_TYPES.contains(contentType)) {
-            throw new RuntimeException("Only image files are allowed (jpeg, png, gif, webp)");
+            throw new com.restaurant.exception.BusinessException("Only image files are allowed (jpeg, png, gif, webp)");
         }
 
         if (file.getSize() > 10 * 1024 * 1024) {
-            throw new RuntimeException("File size must not exceed 10 MB");
+            throw new com.restaurant.exception.BusinessException("File size must not exceed 10 MB");
         }
 
         // Validate actual file content via magic bytes — prevents spoofed content-type.
@@ -68,7 +68,7 @@ public class FileUploadService {
             detectedType = detectMimeType(headerStream);
         }
         if (!ALLOWED_TYPES.contains(detectedType)) {
-            throw new RuntimeException("File content does not match an allowed image type");
+            throw new com.restaurant.exception.BusinessException("File content does not match an allowed image type");
         }
 
         Path dir = Paths.get(uploadDir).toAbsolutePath().normalize();
@@ -86,7 +86,7 @@ public class FileUploadService {
         // Resolve and verify the target path stays inside uploadDir (path traversal guard)
         Path target = dir.resolve(filename).normalize();
         if (!target.startsWith(dir)) {
-            throw new RuntimeException("Invalid file path");
+            throw new com.restaurant.exception.BusinessException("Invalid file path");
         }
 
         Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
@@ -108,7 +108,7 @@ public class FileUploadService {
         byte[] header = new byte[12];
         int read = in.read(header);
         if (read < 4) {
-            throw new RuntimeException("File is too small to be a valid image");
+            throw new com.restaurant.exception.BusinessException("File is too small to be a valid image");
         }
 
         // JPEG: FF D8 FF

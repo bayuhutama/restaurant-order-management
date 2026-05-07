@@ -20,7 +20,9 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "payments")
-@Data
+@Getter
+@Setter
+@ToString(exclude = {"order"})
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -77,4 +79,17 @@ public class Payment {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Payment that)) return false;
+        return id != null && id.equals(that.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
+    }
 }
+

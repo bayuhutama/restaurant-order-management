@@ -69,13 +69,15 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useCartStore } from '@/stores/cart'
 import { useOrdersStore } from '@/stores/orders'
 import { useTableStore } from '@/stores/table'
-import { orderApi, tableSessionApi } from '@/api'
+import { orderApi } from '@/api'
+import { useSessionCleanup } from '@/composables/useSessionCleanup'
 import CartDrawer from '@/components/CartDrawer.vue'
 import { PhShoppingCart, PhForkKnife, PhReceipt } from '@phosphor-icons/vue'
 
 const cart = useCartStore()
 const ordersStore = useOrdersStore()
 const tableStore = useTableStore()
+const { checkAndClean } = useSessionCleanup()
 const cartOpen = ref(false)
 
 // Statuses that count as "active" for the orders badge
@@ -104,12 +106,8 @@ async function refreshStatuses() {
   if (!tableStore.tableNumber) { orderStatuses.value = {}; return }
   if (tableOrderNumbers.value.length === 0) { orderStatuses.value = {}; return }
 
-  // A 404 here means the session was ended by staff — clear stored orders
-  try {
-    await tableSessionApi.getSession(tableStore.tableNumber)
-  } catch {
-    ordersStore.getNumbersForTable(tableStore.tableNumber).forEach(n => ordersStore.removeOrder(n))
-    tableStore.clearTable()
+  await checkAndClean(tableStore.tableNumber)
+  if (!tableStore.tableNumber) {
     orderStatuses.value = {}
     return
   }

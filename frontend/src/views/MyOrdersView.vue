@@ -108,11 +108,13 @@ import { formatRupiah } from '@/utils/format'
 import { useOrdersStore } from '@/stores/orders'
 import { useTableStore } from '@/stores/table'
 import { useWebSocket } from '@/composables/useWebSocket'
+import { useSessionCleanup } from '@/composables/useSessionCleanup'
 import OrderStatusBadge from '@/components/OrderStatusBadge.vue'
 import { PhReceipt, PhTable } from '@phosphor-icons/vue'
 
 const ordersStore = useOrdersStore()
 const tableStore = useTableStore()
+const { clearSession } = useSessionCleanup()
 const orders = ref([])
 const loading = ref(true)
 
@@ -143,8 +145,7 @@ function clearDelivered() {
 }
 
 function clearTableSession() {
-  ordersStore.getNumbersForTable(tableStore.tableNumber).forEach(n => ordersStore.removeOrder(n))
-  tableStore.clearTable()
+  clearSession(tableStore.tableNumber)
 }
 
 /**

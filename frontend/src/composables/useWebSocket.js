@@ -35,7 +35,7 @@ export function useWebSocket() {
     if (client.value) return  // already connected or connecting — avoid duplicates
 
     client.value = new Client({
-      webSocketFactory: () => new SockJS('http://localhost:8080/ws'),
+      webSocketFactory: () => new SockJS(import.meta.env.VITE_WS_URL || 'http://localhost:8080/ws'),
       reconnectDelay: 5000,  // retry after 5s on disconnect
       onConnect: () => {
         connected.value = true

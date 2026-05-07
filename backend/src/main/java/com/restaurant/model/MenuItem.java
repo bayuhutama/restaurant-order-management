@@ -13,7 +13,9 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "menu_items")
-@Data
+@Getter
+@Setter
+@ToString(exclude = {"category"})
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -59,4 +61,17 @@ public class MenuItem {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof MenuItem that)) return false;
+        return id != null && id.equals(that.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
+    }
 }
+

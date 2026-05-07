@@ -31,7 +31,9 @@ import java.util.List;
         // table_session_id FK lookups (findByTableSessionId) need an index for fast joins
         @Index(name = "idx_orders_table_session_id", columnList = "table_session_id")
 })
-@Data
+@Getter
+@Setter
+@ToString(exclude = {"items", "payment", "tableSession", "user"})
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -108,4 +110,22 @@ public class Order {
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
+
+    /**
+     * Identity based on primary key only — safe for managed JPA entities.
+     * Avoids triggering lazy-loading of collections (items, payment, etc.)
+     * that Lombok's @Data-generated equals/hashCode would include.
+     */
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Order that)) return false;
+        return id != null && id.equals(that.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
+    }
 }
+

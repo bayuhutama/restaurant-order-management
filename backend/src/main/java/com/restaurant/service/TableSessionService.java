@@ -41,7 +41,7 @@ public class TableSessionService {
     private final TableSessionRepository tableSessionRepository;
     private final OrderRepository orderRepository;
     private final PaymentRepository paymentRepository;
-    private final OrderService orderService;
+    private final com.restaurant.mapper.OrderMapper orderMapper;
 
     /** How long (minutes) a session can be idle before the scheduler expires it. Default: 60. */
     @Value("${table.session.timeout-minutes:60}")
@@ -125,7 +125,7 @@ public class TableSessionService {
 
         // Collect all payments that need updating, then batch-save in one round-trip
         // instead of one UPDATE per order (N round-trips → 1).
-        List<Payment> paymentsToUpdate = new java.util.ArrayList<>();
+        List<Payment> paymentsToUpdate = new ArrayList<>();
         LocalDateTime now = LocalDateTime.now();
         for (Order order : orders) {
             Payment payment = order.getPayment();
@@ -178,7 +178,7 @@ public class TableSessionService {
                 : orderRepository.findByTableSessionId(session.getId());
 
         List<OrderResponse> orderResponses = orders.stream()
-                .map(orderService::mapToResponse)
+                .map(orderMapper::mapToResponse)
                 .toList();
 
         // Total is the sum of all individual order amounts for this table visit

@@ -14,7 +14,9 @@ import java.math.BigDecimal;
  */
 @Entity
 @Table(name = "order_items")
-@Data
+@Getter
+@Setter
+@ToString(exclude = {"order"})
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -44,4 +46,17 @@ public class OrderItem {
 
     /** Optional customer notes for this item (e.g. "no onions"). */
     private String notes;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof OrderItem that)) return false;
+        return id != null && id.equals(that.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
+    }
 }
+

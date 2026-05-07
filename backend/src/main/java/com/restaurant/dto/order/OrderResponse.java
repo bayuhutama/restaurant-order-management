@@ -25,4 +25,14 @@ public record OrderResponse(
         PaymentResponse payment,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
-) {}
+) {
+    /** Helper to create a copy of this response with a populated payment token. */
+    public OrderResponse withPayment(PaymentResponse newPayment) {
+        return new OrderResponse(
+                id, orderNumber, customerName, customerPhone, customerEmail,
+                status, totalAmount, notes, tableNumber, items,
+                newPayment, createdAt, updatedAt
+        );
+    }
+}
+

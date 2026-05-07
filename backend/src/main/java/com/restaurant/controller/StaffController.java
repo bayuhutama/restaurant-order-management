@@ -3,9 +3,7 @@ package com.restaurant.controller;
 import com.restaurant.dto.order.OrderResponse;
 import com.restaurant.dto.order.TableSessionResponse;
 import com.restaurant.dto.order.UpdateStatusRequest;
-import com.restaurant.model.Order;
 import com.restaurant.model.enums.OrderStatus;
-import com.restaurant.repository.OrderRepository;
 import com.restaurant.service.OrderService;
 import com.restaurant.service.TableSessionService;
 import jakarta.validation.Valid;
@@ -30,7 +28,6 @@ import java.util.List;
 public class StaffController {
 
     private final OrderService orderService;
-    private final OrderRepository orderRepository;
     private final TableSessionService tableSessionService;
 
     /**
@@ -49,9 +46,7 @@ public class StaffController {
     /** Returns a single order by database ID. */
     @GetMapping("/orders/{id}")
     public ResponseEntity<OrderResponse> getOrder(@PathVariable Long id) {
-        Order order = orderRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
-        return ResponseEntity.ok(orderService.mapToResponse(order));
+        return ResponseEntity.ok(orderService.getOrderById(id));
     }
 
     /** Returns all currently OPEN table sessions for the active tables widget. */
@@ -81,7 +76,7 @@ public class StaffController {
             @PathVariable Long id,
             @Valid @RequestBody UpdateStatusRequest request) {
         if (request.status() == OrderStatus.CANCELLED) {
-            throw new RuntimeException("Orders cannot be cancelled by staff — contact an admin");
+            throw new com.restaurant.exception.BusinessException("Orders cannot be cancelled by staff — contact an admin", org.springframework.http.HttpStatus.FORBIDDEN);
         }
         return ResponseEntity.ok(orderService.updateOrderStatus(id, request.status()));
     }

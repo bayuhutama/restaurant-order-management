@@ -9,7 +9,9 @@ import lombok.*;
  */
 @Entity
 @Table(name = "categories")
-@Data
+@Getter
+@Setter
+@ToString
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -29,4 +31,17 @@ public class Category {
     /** URL of the category's cover image (external URL or uploaded path). */
     @Column(name = "image_url")
     private String imageUrl;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Category that)) return false;
+        return id != null && id.equals(that.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
+    }
 }
+

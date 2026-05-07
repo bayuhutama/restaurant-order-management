@@ -62,7 +62,7 @@ public class MenuService {
 
     public void deleteCategory(Long id) {
         if (!categoryRepository.existsById(id)) {
-            throw new RuntimeException("Category not found");
+            throw new com.restaurant.exception.NotFoundException("Category not found");
         }
         categoryRepository.deleteById(id);
         log.info("Category deleted: id={}", id);
@@ -142,7 +142,7 @@ public class MenuService {
 
     public void deleteMenuItem(Long id) {
         if (!menuItemRepository.existsById(id)) {
-            throw new RuntimeException("Menu item not found");
+            throw new com.restaurant.exception.NotFoundException("Menu item not found");
         }
         menuItemRepository.deleteById(id);
         log.info("MenuItem deleted: id={}", id);

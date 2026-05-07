@@ -7,6 +7,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.MacAlgorithm;
 import org.springframework.beans.factory.annotation.Value;
+import jakarta.annotation.PostConstruct;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
@@ -53,9 +54,11 @@ public class JwtUtil {
     /** Claim name for the user's current token version — drives single-session enforcement. */
     public static final String CLAIM_TOKEN_VERSION = "tokenVersion";
 
-    /** Derives the signing key from the configured secret string. */
-    private SecretKey getSigningKey() {
-        return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+    private SecretKey signingKey;
+
+    @PostConstruct
+    public void init() {
+        signingKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
     /** Returns the token lifetime in milliseconds appropriate for the given role. */
@@ -73,46 +76,17 @@ public class JwtUtil {
                 .claim(CLAIM_TOKEN_VERSION, user.getTokenVersion())
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + lifetimeFor(user.getRole())))
-                .signWith(getSigningKey(), ALGORITHM)
+                .signWith(signingKey, ALGORITHM)
                 .compact();
-    }
-
-    /** Extracts the username (subject) from a JWT without validating its expiry. */
-    public String extractUsername(String token) {
-        return getClaims(token).getSubject();
-    }
-
-    /** Returns the tokenVersion claim; null if the claim is missing (legacy tokens). */
-    public Long extractTokenVersion(String token) {
-        Object v = getClaims(token).get(CLAIM_TOKEN_VERSION);
-        if (v instanceof Number n) return n.longValue();
-        return null;
-    }
-
-    /**
-     * Returns true if the token's subject matches the given user and the token
-     * is not expired. Does NOT check tokenVersion — the filter compares that
-     * separately because it requires the concrete User entity (UserDetails
-     * does not expose tokenVersion).
-     */
-    public boolean isTokenValid(String token, UserDetails userDetails) {
-        final String username = extractUsername(token);
-        return username.equals(userDetails.getUsername()) && !isTokenExpired(token);
-    }
-
-    private boolean isTokenExpired(String token) {
-        return getClaims(token).getExpiration().before(new Date());
     }
 
     /**
      * Parses and verifies the token signature, returning all claims.
      * Throws on invalid or expired tokens.
-     * verifyWith() constrains the algorithm to the key type (HMAC-SHA), so a
-     * separate requireAlgorithm() call is unnecessary in jjwt 0.12.x.
      */
-    private Claims getClaims(String token) {
+    public Claims parseToken(String token) {
         return Jwts.parser()
-                .verifyWith(getSigningKey())
+                .verifyWith(signingKey)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
